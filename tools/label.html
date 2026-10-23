@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desk Labelling</title>
+<style>
+  :root { --bg:#0e1014; --panel:#161920; --panel2:#1d212a; --line:#2a2f3a; --text:#e7e9ee; --dim:#8a93a4;
+          --on:#3ecf8e; --accent:#4c8dff; --warn:#f5a524; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui, sans-serif; }
+  header { display:flex; align-items:center; gap:10px; padding:12px 18px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  h1 { font-size:16px; margin:0 8px 0 0; }
+  .tab { background:var(--panel); color:var(--dim); border:1px solid var(--line); border-radius:999px; padding:6px 14px; font:inherit; cursor:pointer; }
+  .tab.active { color:var(--text); border-color:var(--accent); }
+  .spacer { flex:1; }
+  .progress { color:var(--dim); }
+  .progress b { color:var(--text); }
+  main { max-width:calc((100vh - 200px) * 16 / 9); margin:0 auto; padding:12px 18px; }
+  .frame { position:relative; aspect-ratio:16/9; background:#000; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .frame img { width:100%; height:100%; object-fit:contain; display:block; }
+  .tag { position:absolute; top:10px; right:10px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:600;
+         background:rgba(0,0,0,.7); color:var(--warn); }
+  .tag.done { color:var(--on); }
+  .q { margin:12px 0 8px; font-weight:600; }
+  .q span { color:var(--dim); font-weight:400; }
+  .boxes { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .box { min-width:56px; height:48px; border-radius:8px; border:2px solid var(--line); background:var(--panel2);
+         color:var(--text); font:700 20px system-ui; cursor:pointer; }
+  .box.on { background:var(--on); border-color:var(--on); color:#06281a; }
+  .nav { display:flex; gap:8px; margin-top:12px; align-items:center; flex-wrap:wrap; }
+  button.btn { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:8px 14px; font:inherit; cursor:pointer; }
+  button.btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .keys { color:var(--dim); font-size:12px; }
+  #status { color:var(--dim); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Who is really sitting?</h1>
+  <div id="tabs"></div>
+  <span class="spacer"></span>
+  <span class="progress" id="progress"></span>
+</header>
+<main>
+  <div class="frame"><img id="img" alt="labelling frame"><span class="tag" id="tag"></span></div>
+  <div class="q">Click every box where someone is <u>sitting</u> at that desk <span>· standing or walking past does not count</span></div>
+  <div class="boxes" id="boxes"></div>
+  <div class="nav">
+    <button class="btn" id="prev">← Back</button>
+    <button class="btn" id="none">Nobody sitting</button>
+    <button class="btn primary" id="next">Confirm &amp; next →</button>
+    <span class="spacer"></span>
+    <span id="status"></span>
+  </div>
+  <p class="keys">Keys: 1–9 toggle a box · 0 nobody · Enter or → confirm &amp; next · ← back</p>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let cat = {}, cam = null, i = 0;
+
+function cur() { return cat[cam].frames[i]; }
+
+function show() {
+  const c = cat[cam], f = cur();
+  $("tabs").innerHTML = Object.keys(cat).map(k =>
+    `<button class="tab ${k === cam ? "active" : ""}" data-cam="${k}">${k.toUpperCase()}</button>`).join(" ");
+  $("img").src = `/img/${f.file}`;
+  $("tag").textContent = f.labelled ? "checked" : "model's guess, not checked yet";
+  $("tag").className = "tag" + (f.labelled ? " done" : "");
+  $("boxes").innerHTML = c.boxes.map(n =>
+    `<button class="box ${f.sitting.includes(n) ? "on" : ""}" data-n="${n}">${n}</button>`).join("");
+  const done = c.frames.filter(x => x.labelled).length;
+  $("progress").innerHTML = `${cam.toUpperCase()} frame <b>${i + 1}</b> / ${c.frames.length} · checked <b>${done}</b> · ${f.t >= 18000 ? `${String(Math.floor(f.t / 3600)).padStart(2, "0")}:${String(Math.floor(f.t / 60) % 60).padStart(2, "0")}` : `${Math.floor(f.t / 60)} min into the recording`}`;
+}
+
+function toggle(n) {
+  const s = cur().sitting, k = s.indexOf(n);
+  if (!cat[cam].boxes.includes(n)) return;
+  k >= 0 ? s.splice(k, 1) : s.push(n);
+  show();
+}
+
+async function save() {
+  const labels = {};
+  for (const f of cat[cam].frames) if (f.labelled) labels[f.t] = [...f.sitting].sort((a, b) => a - b);
+  const r = await fetch(`/labels/${cam}`, { method: "POST", body: JSON.stringify(labels) });
+  $("status").textContent = r.ok ? "saved" : "save failed: " + await r.text();
+}
+
+async function next() {
+  cur().labelled = true;
+  await save();
+  if (i < cat[cam].frames.length - 1) i++;
+  else {
+    const cams = Object.keys(cat), k = cams.indexOf(cam);
+    if (k < cams.length - 1) { cam = cams[k + 1]; i = 0; } else $("status").textContent = "all frames checked — saved";
+  }
+  show();
+}
+
+$("boxes").onclick = (e) => { const n = e.target.dataset.n; if (n) toggle(+n); };
+$("tabs").onclick = (e) => { const k = e.target.dataset.cam; if (k) { cam = k; i = Math.max(0, cat[cam].frames.findIndex(f => !f.labelled)); show(); } };
+$("prev").onclick = () => { if (i > 0) { i--; show(); } };
+$("none").onclick = () => { cur().sitting = []; show(); };
+$("next").onclick = next;
+document.addEventListener("keydown", (e) => {
+  if (e.key >= "1" && e.key <= "9") toggle(+e.key);
+  else if (e.key === "0") { cur().sitting = []; show(); }
+  else if (e.key === "Enter" || e.key === "ArrowRight") { e.preventDefault(); next(); }
+  else if (e.key === "ArrowLeft") { if (i > 0) { i--; show(); } }
+});
+
+fetch("/catalogue").then(r => r.json()).then(c => {
+  cat = c;   // open on the first camera that still has unlabelled frames
+  cam = Object.keys(cat).find(k => cat[k].frames.some(f => !f.labelled)) || Object.keys(cat)[0];
+  i = Math.max(0, cat[cam].frames.findIndex(f => !f.labelled));
+  show();
+});
+</script>
+</body>
+</html>

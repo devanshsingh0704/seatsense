@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Working or Not</title>
+<style>
+  :root { --bg:#0e1014; --panel:#161920; --panel2:#1d212a; --line:#2a2f3a; --text:#e7e9ee; --dim:#8a93a4;
+          --work:#5aa9ff; --not:#f0a53a; --unc:#8a93a4; --accent:#4c8dff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui, sans-serif; }
+  header { display:flex; align-items:center; gap:12px; padding:12px 18px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  h1 { font-size:16px; margin:0; }
+  .grow { flex:1; }
+  .progress { color:var(--dim); } .progress b { color:var(--text); }
+  .bar { height:4px; background:var(--panel2); } .bar i { display:block; height:100%; background:var(--accent); width:0; }
+  main { display:flex; flex-direction:column; align-items:center; padding:16px; gap:12px; }
+  .crop { height:min(60vh, 560px); max-width:100%; display:flex; align-items:center; justify-content:center; background:#000;
+          border:1px solid var(--line); border-radius:10px; padding:6px; }
+  .crop img { max-height:100%; max-width:100%; }
+  .meta { color:var(--dim); font-size:13px; text-align:center; } .meta b { color:var(--text); }
+  .answers { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .ans { min-width:140px; min-height:48px; padding:10px 14px; border-radius:10px; border:2px solid var(--line); background:var(--panel);
+         color:var(--text); font:600 15px system-ui; cursor:pointer; }
+  .ans kbd { margin-left:8px; padding:0 6px; border:1px solid var(--line); border-radius:4px; font-size:12px; color:var(--dim); }
+  .ans.on.W { border-color:var(--work); background:rgba(90,169,255,.15); }
+  .ans.on.P, .ans.on.T, .ans.on.I { border-color:var(--not); background:rgba(240,165,58,.15); }
+  .ans.on.U { border-color:var(--unc); background:rgba(138,147,164,.15); }
+  .hint { color:var(--dim); font-size:12px; text-align:center; max-width:720px; margin:0; }
+  .nav { display:flex; gap:8px; }
+  button.btn { min-height:36px; background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 12px; font:inherit; cursor:pointer; }
+  #status { color:var(--dim); font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Working or not?</h1>
+  <span class="grow"></span>
+  <span class="progress" id="progress"></span>
+</header>
+<div class="bar"><i id="bar"></i></div>
+<main>
+  <div class="crop"><img id="img" alt="seated person at the desk outlined in green"></div>
+  <div class="meta" id="meta"></div>
+  <div class="answers">
+    <button class="ans W" data-a="W">Working<kbd>W</kbd></button>
+    <button class="ans P" data-a="P">Phone<kbd>P</kbd></button>
+    <button class="ans T" data-a="T">Talking / turned<kbd>T</kbd></button>
+    <button class="ans I" data-a="I">Idle / other<kbd>I</kbd></button>
+    <button class="ans U" data-a="U">Unclear<kbd>U</kbd></button>
+  </div>
+  <div class="nav"><button class="btn" id="prev">← Back</button></div>
+  <p class="hint">Judge the person sitting at the desk <b>outlined in green</b>. Working = facing the screen or desk work (typing, writing, reading).
+    Phone = phone in hand or on a call. Talking = turned to someone. Idle = leaning back doing nothing, eating, etc. Unclear if you can't tell.</p>
+  <span id="status"></span>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let crops = [], labels = {}, i = 0;
+const pad = (n) => String(n).padStart(2, "0");
+
+function show() {
+  const c = crops[i], cur = labels[c.file];
+  $("img").src = `/img/${c.file}`;
+  $("meta").innerHTML = `${c.dir.slice(6, 8)}/${c.dir.slice(4, 6)} · ${pad(Math.floor(c.t / 3600))}:${pad(Math.floor(c.t / 60) % 60)} · desk <b>${c.box}</b>` +
+    (cur ? ` · your answer: <b>${cur}</b>` : " · not answered yet");
+  document.querySelectorAll(".ans").forEach((b) => b.classList.toggle("on", b.dataset.a === cur));
+  const done = Object.keys(labels).length;
+  $("progress").innerHTML = `person <b>${i + 1}</b> / ${crops.length} · answered <b>${done}</b>`;
+  $("bar").style.width = `${done / crops.length * 100}%`;
+}
+
+async function answer(a) {
+  labels[crops[i].file] = a;
+  const r = await fetch("/labels", { method: "POST", body: JSON.stringify(labels) });
+  $("status").textContent = r.ok ? "saved" : "save failed: " + await r.text();
+  if (i < crops.length - 1) i++; else $("status").textContent = "all answered — saved";
+  show();
+}
+
+document.querySelector(".answers").onclick = (e) => { const b = e.target.closest(".ans"); if (b) answer(b.dataset.a); };
+$("prev").onclick = () => { if (i > 0) { i--; show(); } };
+document.addEventListener("keydown", (e) => {
+  const k = e.key.toUpperCase();
+  if ("WPTIU".includes(k) && k.length === 1) answer(k);
+  else if (e.key === "ArrowLeft" && i > 0) { i--; show(); }
+  else if (e.key === "ArrowRight" && i < crops.length - 1) { i++; show(); }
+});
+fetch("/data").then((r) => r.json()).then((d) => {
+  crops = d.crops; labels = d.labels;
+  i = Math.max(0, crops.findIndex((c) => !labels[c.file]));
+  show();
+});
+</script>
+</body>
+</html>

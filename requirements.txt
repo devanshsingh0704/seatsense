@@ -1,0 +1,7 @@
+# tested with these versions (CUDA 12.8 build of torch); ffmpeg must be on PATH
+torch==2.7.0
+torchvision==0.22.0
+ultralytics==8.4.51
+opencv-python==4.13.0.92   # GUI build: mark_boxes.py opens a window
+numpy==2.4.6
+pillow==11.3.0

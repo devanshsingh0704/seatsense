@@ -1,0 +1,21 @@
+# secrets
+.env
+# employee images, attendance data and models trained on them -- never on GitHub
+recordings/
+snapshots/
+states/
+events/
+models/
+*.jpg
+*.png
+*.mkv
+*.mp4
+*.pt
+# local
+.venv/
+__pycache__/
+# box backups and the dropped D4 camera: local only
+zones/*.before_*.json
+zones/*.original.json
+zones/*.prev.json
+zones/d4_focus.json
