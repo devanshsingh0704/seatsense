@@ -148,6 +148,9 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
+// ?blur=1: privacy view for shared screens and screenshots -- nobody is recognisable, no site name
+const BLUR = new URLSearchParams(location.search).has("blur");
+if (BLUR) $("img").style.filter = "blur(26px)";
 const DAY = 570, OPEN = 9 * 3600 + 1800;   // office hours 09:30-19:00
 const LABEL = { occupied: "Occupied", working: "Working", not: "Not working", vacant: "Vacant", checking: "Checking…" };
 const COLOR = { occupied: "#5AA9FF", working: "#5AA9FF", not: "#F0A53A", vacant: "#6B7380", checking: "#6B7380" };
@@ -182,7 +185,7 @@ async function pullFrames(cam) {
 
 function render(s) {
   const c = s.cameras[0], now = s.now;
-  $("camName").textContent = c.name;
+  $("camName").textContent = BLUR ? `Camera ${c.id.toUpperCase()}` : c.name;   // blur view hides the site name too
   const warm = now - s.started < WARMUP;
   if (warm) c.desks.forEach((d) => { if (d.state === "vacant" && d.since == null) d.state = "checking"; });
   $("clock").textContent = new Date(now * 1000).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -192,7 +195,10 @@ function render(s) {
   lc.lastChild.textContent = !c.online ? "Camera offline" : starting ? "Starting" : stalled ? "Detector stalled" : "Live";
   $("det").textContent = starting ? "starting" : `${s.det_ms} ms`;
   const g = s.gpu || {}; $("gpu").textContent = g.temp != null ? `${g.temp} °C${g.hot ? " · hot" : ""}` : "—";
-  $("mode").textContent = c.mode === "seat classifier" ? "Seat model · updated every second" : "Box rule · updated every second";
+  const act = c.mode.includes("activity");
+  $("mode").textContent = (c.mode.startsWith("seat classifier") ? "Seat model" : "Box rule") + (act ? " + working model (beta)" : "") + " · updated every second";
+  $("notNote").hidden = act;
+  if (act) { $("lgWork").lastChild.textContent = "Working"; $("lgNot").hidden = false; }
   $("view").classList.toggle("down", !c.online);
   if (!built) { pullFrames(c.id); built = true; }
 

@@ -1,5 +1,7 @@
 # SeatSense
 
+[![tests](https://github.com/devanshsingh0704/seatsense/actions/workflows/tests.yml/badge.svg)](https://github.com/devanshsingh0704/seatsense/actions/workflows/tests.yml)
+
 **Real-time workspace occupancy and activity analytics from an existing CCTV camera.**
 
 SeatSense watches one office camera and answers, for every desk, minute by minute: *is someone
