@@ -21,10 +21,12 @@ import sys
 from pathlib import Path
 
 WS = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(WS / "tools"))
+from evaluate import calibrated, load_temperatures   # noqa: E402
 ACT = WS / "recordings" / "activity"
 SCORES = WS / "models" / "daily_scores.jsonl"
 SEAT_EVERY = 8
-UNSURE = (0.15, 0.85)
+UNSURE = (0.15, 0.85)        # on calibrated probabilities, like the seat review set
 MAX_UNSURE, CONTROL_N = 80, 40
 
 
@@ -32,15 +34,26 @@ def seat_control(rows, every=SEAT_EVERY):
     return [r["t"] for r in rows[::every]]
 
 
+STALE_S = 10   # a live answer older than this was not looking at the frame (live.py skips its own log the same way)
+
+
+def fresh(r):
+    """Was the live answer current? Rows logged before ages were recorded (22 Oct and earlier) are trusted."""
+    if "age" not in r:
+        return True
+    return r["age"] is not None and r["age"] <= STALE_S and r.get("online", True)
+
+
 def missing(frames, rows):
-    """Frame times that have no live answer (the live system was down), in time order."""
-    have = {r["t"] for r in rows}
+    """Frame times with no current live answer (system down, frozen, offline or starting), in time order."""
+    have = {r["t"] for r in rows if fresh(r)}
     return sorted(t for t in frames if t not in have)
 
 
 def fill_missing(day):
-    """Give frames logged while live.py was down an answer from the same seat model, so they can be
-    reviewed too. Raw per-frame answer (no 15 s hold, no visitor check); marked "offline"."""
+    """Give frames logged while live.py was down or stale an answer from the same seat model, so they
+    can be reviewed and scored fairly. Raw per-frame answer (no 15 s hold, no visitor check); marked
+    "offline" and appended, so it replaces the stale row (review_set.latest keeps the last)."""
     import cv2
     sys.path.insert(0, str(WS))
     from presence import load_boxes
@@ -61,9 +74,15 @@ def fill_missing(day):
     print(f"filled {len(ts)} minutes without a live answer")
 
 
-def pick_activity(rows, seed, max_unsure=MAX_UNSURE, control_n=CONTROL_N):
+def activity_unsure(rows, temperature=1.0):
+    """The seated desk-minutes the activity model is unsure about once calibrated, most uncertain first."""
+    cal = [(abs(calibrated(r["p_not"], temperature) - 0.5), r) for r in rows]
+    return [r for g, r in sorted(cal, key=lambda x: x[0]) if g < 0.5 - UNSURE[0]]
+
+
+def pick_activity(rows, seed, max_unsure=MAX_UNSURE, control_n=CONTROL_N, temperature=1.0):
     """rows: [{"t", "box", "p_not"}] for every seated desk-minute -> the picked ones, flagged."""
-    unsure = sorted((r for r in rows if UNSURE[0] < r["p_not"] < UNSURE[1]), key=lambda r: abs(r["p_not"] - 0.5))[:max_unsure]
+    unsure = activity_unsure(rows, temperature)[:max_unsure]
     control = random.Random(seed).sample(rows, min(control_n, len(rows)))
     keys = lambda rs: {(r["t"], r["box"]) for r in rs}
     u, c = keys(unsure), keys(control)
@@ -100,12 +119,15 @@ def review(day):
     from activity import ActivityModel
     from activity_crops import cut
     from presence import load_boxes
-    from review_set import build, logged
+    from review_set import build, logged, unsure
 
+    temps = load_temperatures(WS / "models" / "calibration_d20.json")
     fill_missing(day)
     rows = logged(day)
+    print(f"seat: {sum(bool(r.get('offline')) for r in rows)} of {len(rows)} minutes use an offline answer (live system down or stale)")
     control = seat_control(rows)
-    build(day, [], extra=control)
+    build(day, [], extra=control, temperature=temps["seat"])
+    print(f"seat: {len(unsure(rows, temps['seat']))} of {len(rows)} minutes genuinely unsure (calibrated, T={temps['seat']})")
     (day / "control_d20.json").write_text(json.dumps(control))
 
     boxes = load_boxes(day / "d20_focus.json")
@@ -118,7 +140,9 @@ def review(day):
         img = cv2.resize(cv2.imread(str(day / "frames" / f"d20_{r['t']:05d}.jpg")), (1280, 720), interpolation=cv2.INTER_AREA)
         p = model.predict(img, {n: tuple(v / 2 for v in boxes[n]) for n in occ})
         seated += [{"t": r["t"], "box": n, "p_not": round(p[n], 4)} for n in occ]
-    picked = pick_activity(seated, seed=day.name)
+    picked = pick_activity(seated, seed=day.name, temperature=temps["activity"])
+    print(f"activity: {len(activity_unsure(seated, temps['activity']))} of {len(seated)} seated desk-minutes "
+          f"genuinely unsure (calibrated, T={temps['activity']})")
 
     manifest = json.loads((ACT / "manifest.json").read_text())
     have = {m["file"] for m in manifest}

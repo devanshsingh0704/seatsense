@@ -3,6 +3,7 @@
 
     python3 tools/train_activity.py recordings/activity --res full --cv    # honest 4-fold test
     python3 tools/train_activity.py recordings/activity --res 720 --cv     # same, at the live 1280x720 resolution
+    python3 tools/train_activity.py recordings/activity --res 720 --cv --by-day   # leave one whole day out
     python3 tools/train_activity.py recordings/activity --res 720          # train, save models/activity_d20.pt
 
 Labels come from recordings/activity/labels.json (tools/label_activity.py): W working, P phone,
@@ -43,11 +44,12 @@ def main():
     from crops import crop_box
     from presence import load_boxes
     from train_posture import letterbox_size
-    from train_seat import FOLDS, fold_of
+    from train_seat import fold_key
 
     root = Path(sys.argv[1])
     res = sys.argv[sys.argv.index("--res") + 1] if "--res" in sys.argv else "720"
     cv = "--cv" in sys.argv
+    by_day = "--by-day" in sys.argv
     ex = examples(json.loads((root / "manifest.json").read_text()), json.loads((root / "labels.json").read_text()))
     cache = root / f"train_{res}"
     cache.mkdir(exist_ok=True)
@@ -115,22 +117,25 @@ def main():
         if val:
             with torch.no_grad():
                 for x, _ in DataLoader(Crops(val, False), batch_size=64, num_workers=6):
-                    probs += model(x.cuda()).softmax(1)[:, 1].tolist()
+                    out = model(x.cuda())
+                    probs += zip(out.softmax(1)[:, 1].tolist(), (out[:, 1] - out[:, 0]).tolist())   # (p, raw logit)
         return probs, model
 
     if cv:
+        keys = sorted({fold_key(e, by_day) for e in ex})
+        assert len(keys) > 1, "--by-day needs at least two labelled days"
         rows = []
-        for f in range(FOLDS):
-            train = [e for e in ex if fold_of(e["t"]) != f]
-            val = [e for e in ex if fold_of(e["t"]) == f]
+        for f in keys:
+            train = [e for e in ex if fold_key(e, by_day) != f]
+            val = [e for e in ex if fold_key(e, by_day) == f]
             probs, _ = fit(train, val)
-            rows += [{**e, "p_not": round(p, 4)} for e, p in zip(val, probs)]
+            rows += [{**e, "p_not": round(p, 4), "logit": round(z, 4)} for e, (p, z) in zip(val, probs)]
             print(f"fold {f}: trained on {len(train)}, tested on {len(val)}", flush=True)
         pred = lambda r: r["p_not"] >= 0.5
         work = [r for r in rows if r["y"] == 0]; notw = [r for r in rows if r["y"] == 1]
         wr = sum(not pred(r) for r in work) / len(work); nr = sum(pred(r) for r in notw) / len(notw)
         acc = sum(pred(r) == bool(r["y"]) for r in rows) / len(rows)
-        print(f"\n=== res {res}: 4-fold CV by half-hour, {len(rows)} seated people ===")
+        print(f"\n=== res {res}: {'leave-one-day-out' if by_day else '4-fold CV by half-hour'}, {len(rows)} seated people ===")
         print(f"overall {acc:.1%} | working recognised {wr:.1%} ({len(work)}) | not working caught {nr:.1%} ({len(notw)}) | balanced {(wr + nr) / 2:.1%}")
         for why in ("P", "T", "I"):
             g = [r for r in rows if r["why"] == why]
@@ -138,7 +143,7 @@ def main():
         for b in sorted({r["box"] for r in rows}):
             g = [r for r in rows if r["box"] == b]
             print(f"   desk {b}: right {sum(pred(r) == bool(r['y']) for r in g)}/{len(g)}  (not working {sum(r['y'] for r in g)})")
-        (WS / "models" / f"activity_d20_cv_{res}.json").write_text(json.dumps(rows))
+        (WS / "models" / f"activity_d20_cv_{res}{'_byday' if by_day else ''}.json").write_text(json.dumps(rows))
     else:
         _, model = fit(ex, [])
         torch.save(model.state_dict(), WS / "models" / "activity_d20.pt")

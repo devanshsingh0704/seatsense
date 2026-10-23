@@ -2,6 +2,7 @@
 """Train the "seat occupied?" classifier: one picture per desk box -> sitting / empty.
 
     python3 tools/train_seat.py recordings/20261012-day [recordings/20261017-log ...] --cv   # honest 4-fold test
+    python3 tools/train_seat.py recordings/20261012-day recordings/20261017-log --cv --by-day   # train on the other days, test on a new one
     python3 tools/train_seat.py recordings/20261012-day [recordings/20261017-log ...]        # train, save models/seat_d20.pt
 
 Several folders: each needs labels_d20.json, d20_focus.json and frames/; only labelled frames are used.
@@ -35,6 +36,12 @@ def fold_of(t):
     return (t // BLOCK_S) % FOLDS
 
 
+def fold_key(e, by_day):
+    """--by-day holds out one whole day at a time (a new day, its light and its people's habits);
+    otherwise half-hour blocks, which share days between training and test."""
+    return e["dir"] if by_day else fold_of(e["t"])
+
+
 def main():
     import cv2
     import torch
@@ -49,6 +56,7 @@ def main():
 
     days = [Path(a) for a in sys.argv[1:] if not a.startswith("--")]
     cv = "--cv" in sys.argv
+    by_day = "--by-day" in sys.argv
     boxes = load_boxes(days[0] / f"{CAM}_focus.json")
     ex, pre = [], {}
     for day in days:
@@ -116,14 +124,16 @@ def main():
                 opt.step()
             sched.step()
         model.eval()
-        preds, probs = [], []
+        preds, probs, logits = [], [], []
         if val:
             with torch.no_grad():
                 for x, _ in DataLoader(Crops(val, False), batch_size=128, num_workers=6):
-                    pr = model(x.cuda()).softmax(1)[:, 1]
+                    out = model(x.cuda())
+                    pr = out.softmax(1)[:, 1]
                     probs += pr.tolist()
+                    logits += (out[:, 1] - out[:, 0]).tolist()   # raw score, for exact calibration later
                     preds += (pr >= 0.5).long().tolist()
-        return preds, probs, model
+        return preds, (probs, logits), model
 
     def report(name, rows):
         n = len(rows)
@@ -140,18 +150,25 @@ def main():
 
     baseline = [(e, int(e["box"] in pre.get((e["dir"], e["t"]), []))) for e in ex]
     if cv:
+        keys = sorted({fold_key(e, by_day) for e in ex})
+        assert len(keys) > 1, "--by-day needs at least two labelled days"
         rows, dump = [], []
-        for f in range(FOLDS):
-            train = [e for e in ex if fold_of(e["t"]) != f]
-            val = [e for e in ex if fold_of(e["t"]) == f]
-            preds, probs, _ = fit(train, val)
+        for f in keys:
+            train = [e for e in ex if fold_key(e, by_day) != f]
+            val = [e for e in ex if fold_key(e, by_day) == f]
+            preds, (probs, logits), _ = fit(train, val)
             rows += list(zip(val, preds))
-            dump += [{**e, "p_sitting": round(pr, 4), "rule": int(e["box"] in pre.get((e["dir"], e["t"]), []))} for e, pr in zip(val, probs)]
+            dump += [{**e, "p_sitting": round(pr, 4), "logit": round(z, 4), "rule": int(e["box"] in pre.get((e["dir"], e["t"]), []))}
+                     for e, pr, z in zip(val, probs, logits)]
             print(f"fold {f}: trained on {len(train)}, tested on {len(val)}", flush=True)
-        print(f"\n=== 4-fold cross-validation by half-hour blocks, {len(rows)} desk checks ===")
+            if by_day:
+                report(f"  held-out day {Path(f).name}", list(zip(val, preds)))
+        how = "leave-one-day-out" if by_day else "4-fold cross-validation by half-hour blocks"
+        print(f"\n=== {how}, {len(rows)} desk checks ===")
         res = {"classifier": report("seat classifier", rows), "box_rule": report("baseline (prelabels)", baseline)}
-        (WS / "models" / f"seat_{CAM}_cv.json").write_text(json.dumps(res, indent=1))
-        (WS / "models" / f"seat_{CAM}_cv_rows.json").write_text(json.dumps(dump))   # every held-out answer, for analysis
+        tag = "_byday" if by_day else ""
+        (WS / "models" / f"seat_{CAM}_cv{tag}.json").write_text(json.dumps(res, indent=1))
+        (WS / "models" / f"seat_{CAM}_cv{tag}_rows.json").write_text(json.dumps(dump))   # every held-out answer, for analysis
     else:
         _, _, model = fit(ex, [])
         torch.save(model.state_dict(), WS / "models" / f"seat_{CAM}.pt")

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Save one full-resolution D20 frame per clock minute during office hours (09:00-19:00), plus
-# the live detector's per-desk answer at that moment if it is running. CPU only, no GPU.
+# the live detector's per-desk answer at that moment if it is running, with how old that answer is
+# (age, s) and whether the camera was online -- a frozen detector keeps serving its last answer, so
+# tools/daily.py treats an old or offline answer as missing. CPU only, no GPU.
 # Feeds future labelling: recordings/<YYYYMMDD>-log/frames/d20_<second-of-day>.jpg + live_d20.jsonl
 #   tools/frame_logger.sh
 set -u
@@ -16,7 +18,8 @@ while :; do
         "$D/frames/d20_$(printf %05d "$t").jpg" || echo "$(date +%T) frame grab failed"
     timeout -k 2 5 curl -s -m 3 127.0.0.1:8095/state | python3 -c "
 import json, sys
-c = json.load(sys.stdin)['cameras'][0]
-print(json.dumps({'t': $t, 'desks': {d['no']: [d['state'], d['p_sitting']] for d in c['desks']}}))" \
+s = json.load(sys.stdin); c = s['cameras'][0]
+print(json.dumps({'t': $t, 'desks': {d['no']: [d['state'], d['p_sitting']] for d in c['desks']},
+                  'age': s['det_age'], 'online': c['online']}))" \
         >> "$D/live_d20.jsonl" 2>/dev/null || true
 done

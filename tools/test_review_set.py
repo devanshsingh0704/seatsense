@@ -1,6 +1,6 @@
 import unittest
 
-from review_set import select
+from review_set import latest, select
 
 
 def row(t, **desks):
@@ -33,6 +33,28 @@ class Select(unittest.TestCase):
     def test_every_nth_confident_minute_is_kept_as_a_control(self):
         rows = [row(t, **self.CONFIDENT) for t in range(0, 600, 60)]
         self.assertEqual(select(rows, reported=[], every=5), [0, 300])
+
+
+class Latest(unittest.TestCase):
+    def test_a_filled_in_answer_replaces_the_stale_one_for_that_minute(self):
+        rows = [{"t": 120, "src": "stale"}, {"t": 60, "src": "live"}, {"t": 120, "src": "offline"}]
+        self.assertEqual([(r["t"], r["src"]) for r in latest(rows)], [(60, "live"), (120, "offline")])
+
+
+class Calibrated(unittest.TestCase):
+    QUIET = dict(d1=("vacant", 0.0), d2=("vacant", 0.0), d3=("vacant", 0.0), d4=("vacant", 0.0), d5=("vacant", 0.0), d6=("vacant", 0.0))
+
+    # minute 0 is calm and becomes the control sample (the first remaining minute), as in the tests above
+
+    def test_an_over_confident_score_counts_as_unsure_once_calibrated(self):
+        rows = [row(0, **self.QUIET), row(100, **{**self.QUIET, "d3": ("vacant", 0.01)})]   # raw 1% -> about 9% at T=2
+        self.assertEqual(select(rows, reported=[], every=1000), [0])
+        self.assertEqual(select(rows, reported=[], every=1000, temperature=2.0), [0, 100])
+
+    def test_the_budget_keeps_the_most_uncertain_minutes(self):
+        rows = [row(0, **self.QUIET)] + [row(t, **{**self.QUIET, "d3": ("vacant", p)})
+                                         for t, p in ((60, 0.2), (120, 0.5), (180, 0.9), (240, 0.45))]
+        self.assertEqual(select(rows, reported=[], every=1000, max_unsure=2), [0, 120, 240])
 
 
 if __name__ == "__main__":

@@ -30,6 +30,13 @@ class PickActivity(unittest.TestCase):
         self.assertEqual(picked, [{"t": 0, "box": 1, "p_not": 0.5, "unsure": True, "control": True}])
 
 
+class PickActivityCalibrated(unittest.TestCase):
+    def test_temperature_widens_what_counts_as_unsure(self):
+        rows = [{"t": 0, "box": 1, "p_not": 0.05}]                       # raw 5% -> about 25% at T=3
+        self.assertEqual(pick_activity(rows, seed="d", control_n=0), [])
+        self.assertEqual(len(pick_activity(rows, seed="d", control_n=0, temperature=3.0)), 1)
+
+
 class SeatControl(unittest.TestCase):
     def test_every_nth_logged_minute_regardless_of_what_the_model_said(self):
         self.assertEqual(seat_control([{"t": 60 * i} for i in range(10)], every=4), [0, 240, 480])
@@ -38,6 +45,14 @@ class SeatControl(unittest.TestCase):
 class Missing(unittest.TestCase):
     def test_frames_without_a_live_answer_in_time_order(self):
         self.assertEqual(missing(frames=[300, 60, 120, 180], rows=[{"t": 60}, {"t": 180}]), [120, 300])
+
+    def test_a_stale_or_offline_live_answer_counts_as_missing(self):
+        rows = [{"t": 60, "age": 1.2, "online": True},
+                {"t": 120, "age": 400.0, "online": True},     # detector frozen: old answer
+                {"t": 180, "age": 1.0, "online": False},      # camera offline
+                {"t": 240, "age": None, "online": True},      # just started, no answer yet
+                {"t": 300}]                                   # logged before ages were recorded: trusted
+        self.assertEqual(missing(frames=[60, 120, 180, 240, 300], rows=rows), [120, 180, 240])
 
 
 class Scores(unittest.TestCase):
