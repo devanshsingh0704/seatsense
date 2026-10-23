@@ -13,6 +13,8 @@ data it has never seen.
 It runs on one GPU workstation next to the NVR. No cloud and no stored video: only one
 state per desk per minute.
 
+![Live view: desk states over the blurred camera picture, desk cards and today's timeline](docs/screenshots/dashboard-live.png)
+
 ---
 
 ## What it does
@@ -24,6 +26,11 @@ state per desk per minute.
 | **Live dashboard** | Camera view with state-coloured desk boxes, desk cards, today's timeline, events. |
 | **Reports** | Per desk, by day or week: time at desk, time working, time not working, vacant, number of departures, longest stretch, timeline. CSV export. |
 | **Daily learning loop** | Uncertainty sampling, labelling UI, honest daily accuracy, retraining with rollback. |
+
+The Reports page: day and week per desk, the timeline, and the mistakes users reported from the
+live view with how far each has got (labelled, retrained, fixed).
+
+![Reports: time at desk, working and not working per desk, timeline and reported mistakes](docs/screenshots/dashboard-reports.png)
 
 ## Architecture
 

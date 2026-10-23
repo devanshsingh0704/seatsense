@@ -23,3 +23,5 @@ zones/d4_focus.json
 users.json
 certs/
 logs/
+# the README's dashboard screenshots (camera blurred, no site name) are the only images allowed
+!docs/screenshots/*.png

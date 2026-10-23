@@ -13,6 +13,7 @@
     --mono:'IBM Plex Mono', ui-monospace, monospace;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }   /* a class's own display must never un-hide an element */
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 'IBM Plex Sans', system-ui, sans-serif; }
   a { color: var(--work-t); }
   header { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 28px; padding: 14px 32px; border-bottom: 1px solid var(--line); background: var(--bar); }
