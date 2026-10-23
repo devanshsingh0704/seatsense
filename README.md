@@ -153,6 +153,7 @@ flowchart LR
 | **Zero-shot COCO "cell phone" for phone use** | Rejected. It finds phones in hand (0.7–0.9), but scores the same on an AC remote, phones lying on desks and boxes. Replaced by the trained activity classifier. |
 | **"Is the chair empty?" check** | Rejected. From these angles a seated person hides their own chair completely (0.00 overlap). |
 | **Tuning box geometry** | Plateaued. Seated and standing overlaps share the 0.77–0.85 range; no threshold separates them. This is what led to the per-desk classifier. |
+| **Full-resolution crops for the activity model** | Rejected. On unseen days, crops cut from the 2560×1440 frame scored 77.7% vs 81.2% at 720p: phones were not caught more often (153 vs 151 of 216), and working people were wrongly flagged more (precision 58% vs 66%). |
 | **A single train/test split** | Gave an inflated 96.2% from picking the best epoch on the test set. Replaced by time-blocked 4-fold CV with final-epoch scores. |
 
 ## Reliability

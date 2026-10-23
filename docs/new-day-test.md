@@ -39,3 +39,22 @@ about 2 points of precision.
 Both models were retrained on 12 + 17 + 22 Oct and switched live on 23 Oct, because the held-out-day
 results improved for both. The previous models are kept for rollback. Calibration temperatures were
 refitted on these held-out predictions (seat 2.41, activity 2.93).
+
+## Does full resolution help? (No)
+
+Same leave-one-day-out test, same 1,559 crops; the only difference is whether the desk crop is cut
+from the full 2560×1440 frame or from the 1280×720 frame the live system decodes. The model input
+is 320 px either way.
+
+| | 720p (live) | Full resolution |
+|---|---|---|
+| Accuracy | **81.2%** | 77.7% |
+| Working recognised | **85.7%** | 79.4% |
+| Not working caught | 69.6% | **73.2%** |
+| Precision of a "not working" flag | **65.5%** | 58.1% |
+| Balanced accuracy | **77.7%** | 76.3% |
+| Phones caught | 151 / 216 | 153 / 216 |
+
+The hypothesis was that sharper pixels would reveal phones held low. They didn't (153 vs 151);
+full resolution mostly flagged more working people as not working, the costlier error. The live
+system keeps the 720p model, which is also cheaper because it is the size already decoded.
