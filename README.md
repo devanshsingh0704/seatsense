@@ -112,8 +112,10 @@ held-out predictions (CPU only, no retraining). What it shows that accuracy hide
   lifts precision only from 76% to 81% while recall falls from 74% to 63%. More data, not a
   different threshold, is the fix.
 - **Generalisation to a new day.** `--cv --by-day` holds out whole days instead of half-hours,
-  which is the honest test for a new Monday. It needs the GPU, so it runs at the next free slot,
-  after 22 Oct is labelled as a third day.
+  the honest test for a new Monday ([`docs/new-day-test.md`](docs/new-day-test.md)). The seat
+  model holds up (96.8% on unseen days vs 97.8% within-day), but the activity model drops from
+  86.7% to about 82%, so the within-day number was optimistic. Adding one labelled day improved
+  every held-out day for both models, which is the case for the daily loop.
 
 ## The daily human-in-the-loop cycle
 

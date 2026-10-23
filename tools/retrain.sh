@@ -9,7 +9,7 @@ PY=${PY:-python3}
 stamp=$(date +%Y%m%d-%H%M)
 mkdir -p "models/history/$stamp"
 cp models/seat_d20.pt models/seat_d20.json models/activity_d20.pt models/activity_d20.json "models/history/$stamp/"
-days=$(for d in recordings/*-day recordings/*-log; do [ -f "$d/labels_d20.json" ] && echo "$d"; done)
+days=$(for d in recordings/*-day recordings/*-log; do if [ -f "$d/labels_d20.json" ]; then echo "$d"; fi; done)   # unlabelled days (e.g. today) are skipped
 echo "seat model on: $days"
 $PY tools/train_seat.py $days
 $PY tools/train_activity.py recordings/activity --res 720
