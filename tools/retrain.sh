@@ -13,4 +13,5 @@ days=$(for d in recordings/*-day recordings/*-log; do if [ -f "$d/labels_d20.jso
 echo "seat model on: $days"
 $PY tools/train_seat.py $days
 $PY tools/train_activity.py recordings/activity --res 720
+$PY tools/check_reported.py recordings/*-log   # do the new models now get the reported mistakes right?
 echo "done; old models in models/history/$stamp"

@@ -13,6 +13,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from mistakes import parse   # noqa: E402
 from presence import load_boxes   # noqa: E402
 
 PORT = 8098
@@ -28,6 +29,17 @@ def validate_labels(labels, boxes, times):
     return labels
 
 
+def notes_for(frame_ts, reports):
+    """{frame t: ["You reported at HH:MM:SS: desk N — what"]}: each report marks its nearest frame."""
+    out = {}
+    for r in reports:
+        if frame_ts:
+            t = min(frame_ts, key=lambda x: abs(x - r["t"]))
+            hms = f"{r['t'] // 3600:02d}:{r['t'] % 3600 // 60:02d}:{r['t'] % 60:02d}"
+            out.setdefault(t, []).append(f"You reported at {hms}: desk {r['desk']} — {r['what']}")
+    return out
+
+
 def catalogue(rec, only=()):
     """{cam: {"boxes": [...], "frames": [{"t", "file", "sitting"}]}} for every (or each named) camera."""
     out = {}
@@ -39,9 +51,12 @@ def catalogue(rec, only=()):
         lab = rec / f"labels_{cam}.json"
         done = json.loads(lab.read_text()) if lab.exists() else {}
         frames = sorted(rec.glob(f"label_frames/{cam}_*.jpg"))
+        rep = rec / "reported.txt"
+        notes = notes_for([int(f.stem.split("_")[1]) for f in frames], parse(rep.read_text()) if rep.exists() else [])
         out[cam] = {"boxes": sorted(load_boxes(rec / f"{cam}_focus.json")),
                     "frames": [{"t": int(f.stem.split("_")[1]), "file": f.name,
                                 "labelled": str(int(f.stem.split("_")[1])) in done,
+                                "notes": notes.get(int(f.stem.split("_")[1]), []),
                                 "sitting": done.get(str(int(f.stem.split("_")[1])),
                                                     start.get(str(int(f.stem.split("_")[1])), []))}
                                for f in frames]}

@@ -7,9 +7,9 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
   :root {
-    --bg:#0B0E12; --bar:#0E1217; --card:#12161C; --line:#1E242C; --line2:#1A2028; --track:#161B22;
-    --text:#E6E9EE; --dim:#9AA3AF; --dim2:#A9B2BF; --soft:#C9D0DA;
-    --work:#5AA9FF; --work-t:#9CCBFF; --not:#F0A53A; --not-t:#F6C27A; --vac:#2A313B; --vac-t:#A3ACB8;
+    --bg:#F4F6F9; --bar:#FFFFFF; --card:#FFFFFF; --line:#E1E5EB; --line2:#ECEFF3; --track:#EEF1F4;
+    --text:#131820; --dim:#5F6875; --dim2:#4E5866; --soft:#4E5866;
+    --work:#2563C9; --work-t:#1B4FA3; --not:#E08A00; --not-t:#8A4A00; --vac:#E3E7ED; --vac-t:#4A5362;
     --mono:'IBM Plex Mono', ui-monospace, monospace;
   }
   * { box-sizing: border-box; }
@@ -18,24 +18,24 @@
   .brand { display: flex; align-items: center; gap: 12px; }
   .brand b { display: block; font-size: 16px; font-weight: 650; }
   .brand span { font-size: 12px; color: var(--dim); }
-  nav { display: flex; gap: 4px; padding: 4px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+  nav { display: flex; gap: 4px; padding: 4px; background: #F0F2F5; border: 1px solid var(--line); border-radius: 10px; }
   nav a { padding: 8px 16px; border-radius: 7px; color: var(--dim2); text-decoration: none; font-weight: 500; }
-  nav a[aria-current] { background: #1F2630; color: #fff; font-weight: 600; }
+  nav a[aria-current] { background: #FFFFFF; color: var(--text); font-weight: 600; box-shadow: 0 1px 2px rgba(19,24,32,.10); }
   .grow { flex: 1 1 auto; }
   main { max-width: 1376px; margin: 0 auto; padding: 24px 32px 40px; display: flex; flex-direction: column; gap: 20px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px rgba(19,24,32,.04); }
   h1 { margin: 0 8px 0 0; font-size: 22px; font-weight: 650; }
   h2 { margin: 0; font-size: 16px; font-weight: 600; }
   .sub { font-size: 12px; color: var(--dim); }
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-  .seg { display: flex; align-items: center; gap: 4px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
+  .seg { display: flex; align-items: center; gap: 4px; background: #F0F2F5; border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
   .seg button, .icon { min-height: 36px; padding: 0 16px; border: 0; border-radius: 7px; background: transparent; color: var(--dim2); font: inherit; font-weight: 500; cursor: pointer; }
-  .seg button[aria-pressed="true"] { background: #1F2630; color: #fff; font-weight: 600; }
+  .seg button[aria-pressed="true"] { background: #FFFFFF; color: var(--text); font-weight: 600; box-shadow: 0 1px 2px rgba(19,24,32,.10); }
   .icon { width: 36px; padding: 0; display: grid; place-items: center; color: var(--soft); }
-  .icon:hover, .seg button:hover { color: #fff; }
+  .icon:hover, .seg button:hover { color: var(--text); }
   input[type=date] { min-height: 36px; background: transparent; border: 0; color: var(--text); font: 600 14px 'IBM Plex Sans', sans-serif; color-scheme: dark; padding: 0 6px; }
-  .export { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 10px; background: var(--work); color: #0B0E12; font-weight: 600; text-decoration: none; }
-  .export:hover { background: #7BBBFF; }
+  .export { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 10px; background: var(--work); color: #FFFFFF; font-weight: 600; text-decoration: none; }
+  .export:hover { background: #1D55B0; }
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
   .kpi { padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; }
   .kpi .l { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
@@ -46,44 +46,55 @@
   .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
   .scroll { overflow-x: auto; }
   table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 13px; }
-  thead th { text-align: left; color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; padding: 10px 12px; }
+  thead th { background: #F7F8FA; text-align: left; color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; padding: 10px 12px; }
   tbody tr { border-top: 1px solid var(--line2); }
   tbody th { text-align: left; padding: 12px; font-weight: 600; }
   td { padding: 12px; font-family: var(--mono); }
   .share { display: flex; align-items: center; gap: 10px; }
-  .share i { flex: 1 1 auto; height: 8px; border-radius: 4px; background: #1A2028; overflow: hidden; display: flex; }
+  .share i { flex: 1 1 auto; height: 8px; border-radius: 4px; background: #E3E7ED; overflow: hidden; display: flex; }
   .share i b { background: var(--work); }
-  .na { color: #5B6573; }
+  .na { color: #6B7480; }
   .tl-row { display: flex; align-items: center; gap: 12px; }
   .tl-row > span:first-child { width: 64px; flex: none; font-size: 13px; color: var(--soft); }
   .track { position: relative; flex: 1 1 auto; height: 26px; background: var(--track); border-radius: 6px; overflow: hidden; }
   .track i { position: absolute; top: 0; bottom: 0; }
   .ticks { position: relative; flex: 1 1 auto; height: 18px; }
-  .ticks span { position: absolute; top: 0; font: 11px var(--mono); color: #8B94A1; transform: translateX(-50%); }
+  .ticks span { position: absolute; top: 0; font: 11px var(--mono); color: var(--dim); transform: translateX(-50%); }
   .c-occupied, .c-working { background: var(--work); }
   .c-not { background: var(--not); }
   .c-vacant { background: var(--vac); }
-  .c-nodata { background: repeating-linear-gradient(135deg, #12161C 0 4px, #1A1F26 4px 8px); }
+  .c-nodata { background: repeating-linear-gradient(135deg, #F4F6F9 0 4px, #DCE1E8 4px 8px); }
   .legend { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--soft); }
   .sw { width: 12px; height: 12px; border-radius: 3px; }
-  .bars { display: flex; align-items: flex-end; gap: 28px; height: 220px; padding: 0 8px; border-bottom: 1px solid #2A313B; }
+  .bars { display: flex; align-items: flex-end; gap: 28px; height: 220px; padding: 0 8px; border-bottom: 1px solid #D5DBE3; }
   .bar { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; height: 100%; }
   .bar span { font: 12px var(--mono); color: var(--soft); }
   .bar div { width: 100%; max-width: 72px; display: flex; flex-direction: column; border-radius: 6px 6px 0 0; overflow: hidden; }
   .days { display: flex; gap: 28px; padding: 0 8px; }
   .days span { flex: 1 1 0; text-align: center; font-size: 12px; color: var(--dim); }
-  .note { margin: 0; font-size: 12px; color: #8B94A1; }
+  .note { margin: 0; font-size: 12px; color: var(--dim); }
   .empty { color: var(--dim); padding: 12px 0; }
+  .user { display: flex; align-items: center; gap: 10px; padding-left: 12px; margin-left: 4px; border-left: 1px solid var(--line); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #E6EEFB; color: #1B4FA3; display: grid; place-items: center; font: 700 12px 'IBM Plex Sans', sans-serif; text-transform: uppercase; }
+  .user b { display: block; font-size: 13px; }
+  .linkbtn { padding: 0; border: 0; background: none; color: var(--work-t); font: 12px 'IBM Plex Sans', sans-serif; cursor: pointer; }
+  .linkbtn:hover { text-decoration: underline; }
+
+  .st { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .st-wait { background: #EEF1F4; color: #4A5362; } .st-lab { background: #E6EEFB; color: #1B4FA3; }
+  .st-fixed { background: #E7F5EC; color: #1C6B3A; } .st-not { background: #FDF0DB; color: #8A4A00; } .st-right { background: #F0F2F5; color: #4E5866; }
   @media (max-width: 640px) { header, main { padding-left: 16px; padding-right: 16px; } }
 </style>
 </head>
 <body>
 <header>
   <div class="brand">
-    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="8" fill="#12161C" stroke="#2A313B"/><rect x="8" y="9" width="8" height="7" rx="1.5" fill="none" stroke="#5AA9FF" stroke-width="2"/><rect x="18" y="9" width="8" height="7" rx="1.5" fill="none" stroke="#F0A53A" stroke-width="2"/><rect x="8" y="18" width="8" height="7" rx="1.5" fill="none" stroke="#5AA9FF" stroke-width="2"/><rect x="18" y="18" width="8" height="7" rx="1.5" fill="none" stroke="#5B6573" stroke-width="2" stroke-dasharray="2 2"/></svg>
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="8" fill="#F0F3F7" stroke="#D5DBE3"/><rect x="8" y="9" width="8" height="7" rx="1.5" fill="none" stroke="#2563C9" stroke-width="2"/><rect x="18" y="9" width="8" height="7" rx="1.5" fill="none" stroke="#E08A00" stroke-width="2"/><rect x="8" y="18" width="8" height="7" rx="1.5" fill="none" stroke="#2563C9" stroke-width="2"/><rect x="18" y="18" width="8" height="7" rx="1.5" fill="none" stroke="#8A93A0" stroke-width="2" stroke-dasharray="2 2"/></svg>
     <div><b>Desk Presence</b><span id="camName">Camera D20</span></div>
   </div>
   <nav aria-label="Main"><a href="/">Live</a><a href="/reports" aria-current="page">Reports</a></nav>
+  <div style="flex:1 1 auto"></div>
+  <div class="user" id="userBox" hidden><span class="avatar" id="avatar" aria-hidden="true"></span><div><b id="uname"></b><button type="button" class="linkbtn" id="signout">Sign out</button></div></div>
 </header>
 
 <main>
@@ -137,6 +148,15 @@
     <div class="days" id="days"></div>
   </section>
 
+  <section class="card panel" aria-label="Reported mistakes">
+    <div class="head"><h2>Reported mistakes</h2><span class="sub" id="mnote"></span></div>
+    <p class="sub" style="margin:0">From the <b>Report a mistake</b> button on the Live page. Each report goes into the next labelling set; after you label it and the models are retrained, its status shows whether the new model gets that moment right.</p>
+    <div class="scroll"><table style="min-width:720px">
+      <thead><tr><th scope="col">When</th><th scope="col">Desk</th><th scope="col">What was wrong</th><th scope="col">Status</th></tr></thead>
+      <tbody id="mrows"></tbody>
+    </table></div>
+  </section>
+
   <p class="note">Working = seated and facing the desk or screen. Not working = seated but turned away, chatting, idle or using a phone for 20 s or more. Vacant = nobody seated. No data = the system was off. Times count within office hours only. Working and not-working figures appear once the working / not-working model is live; until then time at desk is shown as one figure.</p>
 </main>
 
@@ -163,7 +183,13 @@ function shift(dir) {
 }
 $("prev").onclick = () => shift(-1);
 $("next").onclick = () => shift(1);
-fetch("/state").then((r) => r.json()).then((s) => { $("camName").textContent = s.cameras[0].name; }).catch(() => {});
+// signed-in user menu; a page whose session has ended goes back to the sign-in page
+const signedOut = (r) => { if (r.status === 401) { location.replace("/login"); throw new Error("signed out"); } return r; };
+$("signout").onclick = async () => { try { await fetch("/logout", { method: "POST" }); } catch {} location.replace("/login"); };
+fetch("/state").then(signedOut).then((r) => r.json()).then((s) => {
+  $("camName").textContent = s.cameras[0].name;
+  if (s.user) { $("userBox").hidden = false; $("uname").textContent = s.user.name; $("avatar").textContent = s.user.name.slice(0, 2); }
+}).catch(() => {});
 $("date").onchange = (e) => { if (e.target.value) { date = e.target.value; load(); } };
 $("pDay").onclick = () => { period = "day"; load(); };
 $("pWeek").onclick = () => { period = "week"; load(); };
@@ -174,7 +200,7 @@ async function load() {
   history.replaceState(null, "", `?date=${date}&period=${period}`);
   $("export").href = `/api/report.csv?date=${date}&period=${period}`;
   let r;
-  try { r = await (await fetch(`/api/report?date=${date}&period=${period}`, { cache: "no-store" })).json(); }
+  try { r = await signedOut(await fetch(`/api/report?date=${date}&period=${period}`, { cache: "no-store" })).json(); }
   catch { $("rows").innerHTML = `<tr><td colspan="9" class="empty">Could not load the report.</td></tr>`; return; }
   const desks = Object.keys(r.desks), three = r.three_state, nDays = r.dates.length;
   const sum = (f) => desks.reduce((a, k) => a + r.desks[k][f], 0);
@@ -208,6 +234,25 @@ async function load() {
       : `<i class="c-occupied" style="height:${x.at / max * 170}px"></i>`}</div></div>`).join("");
     $("days").innerHTML = r.dates.map((d) => `<span>${nice(d)}</span>`).join("");
   }
+  loadMistakes(r.dates);
+}
+
+// reported mistakes for the shown day or week, with how far each one has got
+const ST = { "waiting for labelling": "st-wait", "labelled, waiting for retrain": "st-lab", "fixed": "st-fixed",
+             "not fixed yet": "st-not", "labelled: the system was right": "st-right" };
+async function loadMistakes(dates) {
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  let all = [];
+  for (const d of dates) {
+    try { all = all.concat((await (await fetch(`/api/mistakes?date=${d}`, { cache: "no-store" })).json()).map((m) => ({ ...m, date: d }))); } catch {}
+  }
+  const hms = (t) => `${pad(Math.floor(t / 3600))}:${pad(Math.floor(t / 60) % 60)}:${pad(t % 60)}`;
+  const fixed = all.filter((m) => m.status === "fixed").length;
+  $("mnote").textContent = all.length ? `${all.length} reported · ${fixed} fixed` : "";
+  $("mrows").innerHTML = all.length ? all.map((m) => `<tr><td style="padding:12px;font-family:var(--mono)">${dates.length > 1 ? nice(m.date) + " · " : ""}${hms(m.t)}</td>
+    <th scope="row" style="padding:12px;text-align:left">Desk ${m.desk}</th><td style="padding:12px">${esc(m.what)}</td>
+    <td style="padding:12px"><span class="st ${ST[m.status] || "st-wait"}">${esc(m.status)}</span></td></tr>`).join("")
+    : `<tr><td colspan="4" class="empty">No mistakes reported ${dates.length > 1 ? "this week" : "on this day"}.</td></tr>`;
 }
 load();
 </script>

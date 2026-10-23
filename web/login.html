@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desk Presence · Sign in</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 16px;
+         background: #F4F6F9; color: #131820; font: 14px/1.45 'IBM Plex Sans', system-ui, sans-serif; }
+  .shell { width: 100%; max-width: 980px; display: flex; flex-wrap: wrap; background: #FFFFFF; border: 1px solid #E1E5EB;
+           border-radius: 18px; overflow: hidden; box-shadow: 0 12px 32px rgba(19,24,32,.08); }
+  .about, .form { flex: 1 1 380px; min-width: 0; padding: 48px 44px; display: flex; flex-direction: column; }
+  .about { background: #EEF3FB; gap: 28px; }
+  .form { gap: 20px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand b { display: block; font-size: 18px; font-weight: 650; }
+  .brand span { font-size: 12px; color: #4E5866; }
+  h1 { margin: 0; font-size: 26px; line-height: 1.25; font-weight: 650; }
+  h2 { margin: 0; font-size: 22px; font-weight: 650; }
+  p { margin: 0; color: #4E5866; }
+  ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 14px; color: #273040; }
+  li { display: flex; gap: 12px; align-items: flex-start; }
+  li svg { flex: none; margin-top: 1px; }
+  label { font-weight: 600; font-size: 13px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  input { min-height: 44px; padding: 0 14px; border: 1px solid #C9D0D9; border-radius: 10px; font: inherit; font-size: 15px; color: #131820; background: #FFFFFF; }
+  input:focus { outline: 2px solid #2563C9; outline-offset: 1px; }
+  .pw { display: flex; border: 1px solid #C9D0D9; border-radius: 10px; overflow: hidden; }
+  .pw input { flex: 1 1 auto; min-width: 0; border: 0; border-radius: 0; }
+  .pw button { min-width: 72px; border: 0; border-left: 1px solid #E1E5EB; background: #F7F8FA; color: #1B4FA3; font: 600 13px 'IBM Plex Sans', sans-serif; cursor: pointer; }
+  .go { min-height: 46px; border: 0; border-radius: 10px; background: #2563C9; color: #FFFFFF; font: 600 15px 'IBM Plex Sans', sans-serif; cursor: pointer; }
+  .go:disabled { opacity: .6; cursor: wait; }
+  .err { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; background: #FDECEC; border: 1px solid #F4C7C7; color: #8E1F1F; font-size: 13px; }
+  .foot { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px solid #ECEFF3; font-size: 13px; color: #4E5866; }
+  .foot span { display: flex; align-items: center; gap: 8px; }
+  @media (max-width: 640px) { .about, .form { padding: 32px 22px; } }
+</style>
+</head>
+<body>
+<main class="shell">
+  <section class="about" aria-label="About this dashboard">
+    <div class="brand">
+      <svg width="40" height="40" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="8" fill="#FFFFFF" stroke="#C9D6EC"/><rect x="8" y="9" width="8" height="7" rx="1.5" fill="none" stroke="#2563C9" stroke-width="2"/><rect x="18" y="9" width="8" height="7" rx="1.5" fill="none" stroke="#E08A00" stroke-width="2"/><rect x="8" y="18" width="8" height="7" rx="1.5" fill="none" stroke="#2563C9" stroke-width="2"/><rect x="18" y="18" width="8" height="7" rx="1.5" fill="none" stroke="#8A93A0" stroke-width="2" stroke-dasharray="2 2"/></svg>
+      <div><b>Desk Presence</b><span>Camera D20</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <h1>Desk occupancy and work reports</h1>
+      <p style="font-size:15px">Live desk status and daily or weekly reports for authorised staff.</p>
+    </div>
+    <ul>
+      <li><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10.5 8 14l8-8" fill="none" stroke="#2563C9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>No video is stored — only one state per desk per minute.</span></li>
+      <li><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10.5 8 14l8-8" fill="none" stroke="#2563C9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports show desk numbers, never names.</span></li>
+      <li><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10.5 8 14l8-8" fill="none" stroke="#2563C9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Every sign-in is recorded.</span></li>
+    </ul>
+  </section>
+
+  <section class="form" aria-label="Sign in">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <h2>Sign in</h2>
+      <p>Use the account your administrator gave you.</p>
+    </div>
+    <div class="err" id="err" role="alert" hidden>
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" style="flex:none;margin-top:1px"><circle cx="9" cy="9" r="7.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 5v5M9 12.5v.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span id="errText"></span>
+    </div>
+    <form id="f" style="display:flex;flex-direction:column;gap:20px">
+      <div class="field"><label for="user">Username</label><input id="user" name="name" type="text" autocomplete="username" required autofocus></div>
+      <div class="field"><label for="pass">Password</label>
+        <div class="pw"><input id="pass" name="password" type="password" autocomplete="current-password" required>
+          <button type="button" id="show" aria-pressed="false" aria-controls="pass">Show</button></div></div>
+      <button type="submit" class="go" id="go">Sign in</button>
+    </form>
+    <div class="foot">
+      <span><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="#1C6B3A" stroke-width="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="#1C6B3A" stroke-width="1.5"/></svg>Secure connection (HTTPS). Sessions end after 8 hours or when you sign out.</span>
+      <span>Forgot your password? Ask your administrator to reset it.</span>
+    </div>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+$("show").onclick = () => {
+  const on = $("pass").type === "password";
+  $("pass").type = on ? "text" : "password";
+  $("show").textContent = on ? "Hide" : "Show";
+  $("show").setAttribute("aria-pressed", String(on));
+};
+$("f").onsubmit = async (e) => {
+  e.preventDefault();
+  $("go").disabled = true; $("err").hidden = true;
+  let msg = "Could not reach the dashboard. Try again.";
+  try {
+    const r = await fetch("/login", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: $("user").value.trim(), password: $("pass").value }) });
+    if (r.ok) { location.replace("/"); return; }
+    msg = (await r.json()).error || msg;
+  } catch {}
+  $("errText").textContent = msg; $("err").hidden = false;
+  $("pass").value = ""; $("pass").focus(); $("go").disabled = false;
+};
+</script>
+</body>
+</html>

@@ -16,7 +16,8 @@ while :; do
     t=$(( $(date +%s) - $(date -d 00:00 +%s) ))
     timeout -k 5 20 ffmpeg -loglevel error -y -rtsp_transport tcp -i "$URL" -frames:v 1 -q:v 2 \
         "$D/frames/d20_$(printf %05d "$t").jpg" || echo "$(date +%T) frame grab failed"
-    timeout -k 2 5 curl -s -m 3 127.0.0.1:8095/state | python3 -c "
+    K="X-Service-Key: ${DASH_SERVICE_KEY:-}"   # the dashboard's sign-in lets this key read /state only
+    timeout -k 2 8 sh -c "curl -sfk -m 3 -H '$K' https://127.0.0.1:8095/state || curl -sf -m 3 -H '$K' http://127.0.0.1:8095/state" | python3 -c "
 import json, sys
 s = json.load(sys.stdin); c = s['cameras'][0]
 print(json.dumps({'t': $t, 'desks': {d['no']: [d['state'], d['p_sitting']] for d in c['desks']},

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Working or Not</title>
 <style>
+  .reported { margin: 0 0 10px; padding: 10px 14px; border-radius: 10px; background: #FDF0DB; color: #6B3A00; font-weight: 600; font-size: 14px; }
   :root { --bg:#0e1014; --panel:#161920; --panel2:#1d212a; --line:#2a2f3a; --text:#e7e9ee; --dim:#8a93a4;
           --work:#5aa9ff; --not:#f0a53a; --unc:#8a93a4; --accent:#4c8dff; }
   * { box-sizing:border-box; }
@@ -40,6 +41,7 @@
 </header>
 <div class="bar"><i id="bar"></i></div>
 <main>
+  <div class="reported" id="note" role="note" hidden>You reported a mistake at this desk at this moment.</div>
   <div class="crop"><img id="img" alt="seated person at the desk outlined in green"></div>
   <div class="meta" id="meta"></div>
   <div class="answers">
@@ -62,6 +64,7 @@ const pad = (n) => String(n).padStart(2, "0");
 function show() {
   const c = crops[i], cur = labels[c.file];
   $("img").src = `/img/${c.file}`;
+  $("note").hidden = !c.reported;
   $("meta").innerHTML = `${c.dir.slice(6, 8)}/${c.dir.slice(4, 6)} · ${pad(Math.floor(c.t / 3600))}:${pad(Math.floor(c.t / 60) % 60)} · desk <b>${c.box}</b>` +
     (cur ? ` · your answer: <b>${cur}</b>` : " · not answered yet");
   document.querySelectorAll(".ans").forEach((b) => b.classList.toggle("on", b.dataset.a === cur));

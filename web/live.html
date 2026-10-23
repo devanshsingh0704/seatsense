@@ -7,9 +7,9 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
   :root {
-    --bg:#0B0E12; --bar:#0E1217; --card:#12161C; --line:#1E242C; --line2:#1A2028; --track:#161B22;
-    --text:#E6E9EE; --dim:#9AA3AF; --dim2:#A9B2BF; --soft:#C9D0DA;
-    --work:#5AA9FF; --work-t:#9CCBFF; --not:#F0A53A; --not-t:#F6C27A; --vac:#2A313B; --vac-t:#A3ACB8; --bad:#FF6B6B;
+    --bg:#F4F6F9; --bar:#FFFFFF; --card:#FFFFFF; --line:#E1E5EB; --line2:#ECEFF3; --track:#EEF1F4;
+    --text:#131820; --dim:#5F6875; --dim2:#4E5866; --soft:#4E5866;
+    --work:#2563C9; --work-t:#1B4FA3; --not:#E08A00; --not-t:#8A4A00; --vac:#E3E7ED; --vac-t:#4A5362; --bad:#C62828;
     --mono:'IBM Plex Mono', ui-monospace, monospace;
   }
   * { box-sizing: border-box; }
@@ -19,18 +19,18 @@
   .brand { display: flex; align-items: center; gap: 12px; }
   .brand b { display: block; font-size: 16px; font-weight: 650; }
   .brand span { font-size: 12px; color: var(--dim); }
-  nav { display: flex; gap: 4px; padding: 4px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+  nav { display: flex; gap: 4px; padding: 4px; background: #F0F2F5; border: 1px solid var(--line); border-radius: 10px; }
   nav a { padding: 8px 16px; border-radius: 7px; color: var(--dim2); text-decoration: none; font-weight: 500; }
-  nav a[aria-current] { background: #1F2630; color: #fff; font-weight: 600; }
+  nav a[aria-current] { background: #FFFFFF; color: var(--text); font-weight: 600; box-shadow: 0 1px 2px rgba(19,24,32,.10); }
   .grow { flex: 1 1 auto; }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim2); font-size: 12px; white-space: nowrap; }
   .chip b { color: var(--text); font-family: var(--mono); font-weight: 500; }
-  .chip.live { border: 0; background: rgba(90,169,255,.1); color: var(--work-t); font-weight: 600; display: flex; gap: 8px; align-items: center; }
-  .chip.live.off { background: rgba(255,107,107,.12); color: #FF9A9A; }
+  .chip.live { border: 0; background: #E7F5EC; color: #1C6B3A; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+  .chip.live.off { background: #FDECEC; color: #8E1F1F; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
   main { max-width: 1376px; margin: 0 auto; padding: 24px 32px 40px; display: flex; flex-direction: column; gap: 20px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px rgba(19,24,32,.04); }
   h2 { margin: 0; font-size: 16px; font-weight: 600; }
   .sub { font-size: 12px; color: var(--dim); }
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
@@ -44,23 +44,23 @@
   .head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
   .legend { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--soft); }
   .sw { width: 12px; height: 12px; border-radius: 3px; }
-  .view { position: relative; aspect-ratio: 16/9; background: #0E1217; border: 1px solid var(--line2); border-radius: 10px; overflow: hidden; }
+  .view { position: relative; aspect-ratio: 16/9; background: #E9ECF0; border: 1px solid #D5DBE3; border-radius: 10px; overflow: hidden; }
   .view img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .box { position: absolute; border: 2px solid; border-radius: 6px; transition: background .3s, border-color .3s; }
   .box span { position: absolute; left: 6px; top: 6px; padding: 2px 8px; border-radius: 5px; font-size: 12px; font-weight: 600; color: #0B0E12; white-space: nowrap; }
-  .offline { position: absolute; inset: 0; display: none; place-items: center; background: rgba(0,0,0,.7); color: #FF9A9A; font-weight: 600; text-align: center; padding: 16px; }
+  .offline { position: absolute; inset: 0; display: none; place-items: center; background: rgba(255,255,255,.88); color: #8E1F1F; font-weight: 600; text-align: center; padding: 16px; }
   .view.down .offline { display: grid; }
-  .stamp { position: absolute; left: 14px; bottom: 12px; padding: 4px 10px; border-radius: 6px; background: rgba(11,14,18,.8); font: 12px var(--mono); }
+  .stamp { position: absolute; left: 14px; bottom: 12px; padding: 4px 10px; border-radius: 6px; background: rgba(255,255,255,.92); font: 12px var(--mono); }
   .desks { flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
   .desk { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
   .desk .top { display: flex; align-items: center; gap: 12px; }
   .badge { width: 36px; height: 36px; flex: none; border-radius: 9px; display: grid; place-items: center; font: 700 15px var(--mono); }
   .desk .name { font-weight: 600; }
   .pill { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-  .s-occupied, .s-working { background: rgba(90,169,255,.16); color: var(--work-t); }
-  .s-not { background: rgba(240,165,58,.16); color: var(--not-t); }
-  .s-vacant, .s-checking { background: #1B2129; color: var(--vac-t); }
-  .mini { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: #1A2028; }
+  .s-occupied, .s-working { background: #E6EEFB; color: var(--work-t); }
+  .s-not { background: #FDF0DB; color: var(--not-t); }
+  .s-vacant, .s-checking { background: #EEF1F4; color: var(--vac-t); }
+  .mini { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: #E3E7ED; }
   .tot { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--dim2); }
   .tot b { font-family: var(--mono); font-weight: 500; color: var(--text); }
   .timeline { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
@@ -69,35 +69,51 @@
   .track { position: relative; flex: 1 1 auto; height: 22px; background: var(--track); border-radius: 6px; overflow: hidden; }
   .track i { position: absolute; top: 0; bottom: 0; }
   .ticks { position: relative; flex: 1 1 auto; height: 18px; }
-  .ticks span { position: absolute; top: 0; font: 11px var(--mono); color: #8B94A1; transform: translateX(-50%); }
+  .ticks span { position: absolute; top: 0; font: 11px var(--mono); color: var(--dim); transform: translateX(-50%); }
   .now { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--text); }
   .c-occupied, .c-working { background: var(--work); }
   .c-not { background: var(--not); }
   .c-vacant { background: var(--vac); }
-  .c-nodata { background: repeating-linear-gradient(135deg, #12161C 0 4px, #1A1F26 4px 8px); }
+  .c-nodata { background: repeating-linear-gradient(135deg, #F4F6F9 0 4px, #DCE1E8 4px 8px); }
   .events { flex: 2 1 480px; min-width: 0; padding: 18px 20px; }
   .ev { display: flex; align-items: center; gap: 14px; padding: 8px 0; border-top: 1px solid var(--line2); font-size: 13px; }
   .ev time { font-family: var(--mono); color: var(--dim); width: 64px; }
   .rules { flex: 1 1 320px; min-width: 0; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--dim2); }
   .rules p { margin: 0; }
   .empty { color: var(--dim); font-size: 13px; padding: 8px 0; }
+  .btn { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid #D5DBE3; background: #FFFFFF; color: var(--text); font: 600 13px 'IBM Plex Sans', sans-serif; cursor: pointer; }
+  .btn[aria-pressed="true"] { border-color: #B9CCEB; background: #E6EEFB; color: var(--work-t); }
+  .btn.primary { border: 0; background: var(--work); color: #FFFFFF; min-height: 44px; padding: 0 18px; }
+  dialog { border: 1px solid var(--line); border-radius: 14px; padding: 24px; width: min(620px, calc(100vw - 32px)); box-shadow: 0 16px 40px rgba(19,24,32,.18); color: var(--text); }
+  dialog::backdrop { background: rgba(19,24,32,.35); }
+  dialog form { display: flex; flex-direction: column; gap: 14px; }
+  dialog label { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+  .mrow { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px; align-items: center; }
+  .mrow .mnow { font-size: 12px; color: var(--dim); }
+  dialog select { min-height: 40px; width: 100%; border: 1px solid #C9D0D9; border-radius: 8px; padding: 0 10px; font: inherit; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 16px; border-radius: 10px; background: #131820; color: #FFFFFF; font-size: 13px; display: none; }
+  .user { display: flex; align-items: center; gap: 10px; padding-left: 12px; margin-left: 4px; border-left: 1px solid var(--line); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #E6EEFB; color: #1B4FA3; display: grid; place-items: center; font: 700 12px 'IBM Plex Sans', sans-serif; text-transform: uppercase; }
+  .user b { display: block; font-size: 13px; }
+  .linkbtn { padding: 0; border: 0; background: none; color: var(--work-t); font: 12px 'IBM Plex Sans', sans-serif; cursor: pointer; }
+  .linkbtn:hover { text-decoration: underline; }
+  .nocam { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 16px; color: var(--dim2); font-size: 13px; }
   @media (max-width: 640px) { header, main { padding-left: 16px; padding-right: 16px; } }
 </style>
 </head>
 <body>
 <header>
   <div class="brand">
-    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="8" fill="#12161C" stroke="#2A313B"/><rect x="8" y="9" width="8" height="7" rx="1.5" fill="none" stroke="#5AA9FF" stroke-width="2"/><rect x="18" y="9" width="8" height="7" rx="1.5" fill="none" stroke="#F0A53A" stroke-width="2"/><rect x="8" y="18" width="8" height="7" rx="1.5" fill="none" stroke="#5AA9FF" stroke-width="2"/><rect x="18" y="18" width="8" height="7" rx="1.5" fill="none" stroke="#5B6573" stroke-width="2" stroke-dasharray="2 2"/></svg>
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="8" fill="#F0F3F7" stroke="#D5DBE3"/><rect x="8" y="9" width="8" height="7" rx="1.5" fill="none" stroke="#2563C9" stroke-width="2"/><rect x="18" y="9" width="8" height="7" rx="1.5" fill="none" stroke="#E08A00" stroke-width="2"/><rect x="8" y="18" width="8" height="7" rx="1.5" fill="none" stroke="#2563C9" stroke-width="2"/><rect x="18" y="18" width="8" height="7" rx="1.5" fill="none" stroke="#8A93A0" stroke-width="2" stroke-dasharray="2 2"/></svg>
     <div><b>Desk Presence</b><span id="camName">Camera D20</span></div>
   </div>
   <nav aria-label="Main"><a href="/" aria-current="page">Live</a><a href="/reports">Reports</a></nav>
   <div class="grow"></div>
   <div class="chips">
     <span class="chip live" id="liveChip"><span class="dot"></span><span>Connecting</span></span>
-    <span class="chip">Detector <b id="det">—</b></span>
-    <span class="chip">GPU <b id="gpu">—</b></span>
     <span class="chip">Office hours <b>09:30 – 19:00</b></span>
     <span class="chip"><b id="clock">—</b></span>
+    <div class="user" id="userBox" hidden><span class="avatar" id="avatar" aria-hidden="true"></span><div><b id="uname"></b><button type="button" class="linkbtn" id="signout">Sign out</button></div></div>
   </div>
 </header>
 
@@ -116,10 +132,13 @@
         <div class="grow"></div>
         <span class="legend" id="lgWork"><span class="sw" style="background:var(--work)"></span>Occupied</span>
         <span class="legend" id="lgNot" hidden><span class="sw" style="background:var(--not)"></span>Present, not working</span>
-        <span class="legend"><span class="sw" style="border:2px dashed #6B7380"></span>Vacant</span>
+        <span class="legend"><span class="sw" style="border:2px dashed #8A93A0"></span>Vacant</span>
+        <button type="button" class="btn" id="blurBtn" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8 12.1 12.5 8 12.5 1.5 8 1.5 8Z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span>Camera blurred</span></button>
+        <button type="button" class="btn" id="reportBtn"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 14V2.5h8l-1.5 3 1.5 3H3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Report a mistake</button>
       </div>
       <div class="view" id="view">
         <img id="img" alt="Live camera view of the office">
+        <div class="nocam" id="nocam" hidden>The camera picture is not shown for your account. Desk states below are live.</div>
         <div id="boxes"></div>
         <span class="stamp" id="stamp"></span>
         <div class="offline">Camera offline — desk states are frozen until it reconnects.</div>
@@ -146,14 +165,71 @@
   </div>
 </main>
 
+<dialog id="mistake" aria-labelledby="mTitle">
+  <form method="dialog" id="mForm">
+    <h2 id="mTitle">Report a mistake</h2>
+    <p class="sub" style="margin:0">Change only the desks that are wrong. One picture of this moment goes into the next labelling set, so the model learns from it. Reports and their progress are on the Reports page.</p>
+    <div id="mRows" style="display:flex;flex-direction:column;gap:8px"></div>
+    <p class="sub" id="mErr" role="alert" style="margin:0;color:#8E1F1F" hidden>Mark at least one desk as wrong.</p>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button type="button" class="btn" id="mCancel" style="min-height:44px">Cancel</button>
+      <button type="submit" class="btn primary" value="send">Save report</button>
+    </div>
+  </form>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+
 <script>
 const $ = (id) => document.getElementById(id);
 // ?blur=1: privacy view for shared screens and screenshots -- nobody is recognisable, no site name
 const BLUR = new URLSearchParams(location.search).has("blur");
-if (BLUR) $("img").style.filter = "blur(26px)";
+// camera blur switch: on by default; each viewer's choice is remembered in this browser only
+let blurOn = true;
+try { blurOn = BLUR || localStorage.getItem("blurCamera") !== "off"; } catch {}
+function applyBlur() {
+  $("img").style.filter = blurOn ? "blur(26px)" : "";
+  $("blurBtn").setAttribute("aria-pressed", String(blurOn));
+  $("blurBtn").lastChild.textContent = blurOn ? "Camera blurred" : "Blur camera";
+}
+$("blurBtn").onclick = () => { blurOn = BLUR || !blurOn; try { localStorage.setItem("blurCamera", blurOn ? "on" : "off"); } catch {} applyBlur(); };
+applyBlur();
+// report a mistake -> POST /api/mistake (saved for the next labelling set)
+const KINDS = [["ok", "Correct"], ["seated_shown_vacant", "Someone is sitting, but it shows Vacant"],
+  ["not_seated_shown_occupied", "Nobody is sitting (standing, passing, leaning in), but it shows Occupied"],
+  ["not_working_shown_working", "Not working (phone, talking, idle), but it shows Working"],
+  ["working_shown_not", "Working, but it shows Not working"]];
+let lastDesks = [];
+$("reportBtn").onclick = () => {   // the form shows what each desk says at the moment it is opened
+  $("mRows").innerHTML = lastDesks.map((d) => `<div class="mrow"><label for="m${d.no}" style="flex-direction:column;gap:0"><b>Desk ${d.no}</b>
+    <span class="mnow">shows: ${LABEL[d.state]}</span></label><select id="m${d.no}" data-desk="${d.no}">${KINDS.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select></div>`).join("");
+  $("mErr").hidden = true; $("mistake").showModal();
+};
+$("mCancel").onclick = () => $("mistake").close();
+$("mForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const desks = {};
+  $("mRows").querySelectorAll("select").forEach((s) => { if (s.value !== "ok") desks[s.dataset.desk] = s.value; });
+  if (!Object.keys(desks).length) { $("mErr").hidden = false; return; }
+  let msg = "Could not save the report. Try again.";
+  try {
+    const r = await fetch("/api/mistake", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ desks }) });
+    const n = Object.keys(desks).length;
+    if (r.ok) msg = `Thanks. ${n} desk${n > 1 ? "s" : ""} saved for the next labelling set.`;
+  } catch {}
+  $("mistake").close(); $("mForm").reset();
+  const t = $("toast"); t.textContent = msg; t.style.display = "block"; setTimeout(() => { t.style.display = "none"; }, 4000);
+};
+// signed-in user menu; a page whose session has ended goes back to the sign-in page
+function showUser(u) {
+  if (!u) return;
+  $("userBox").hidden = false; $("uname").textContent = u.name; $("avatar").textContent = u.name.slice(0, 2);
+}
+$("signout").onclick = async () => { try { await fetch("/logout", { method: "POST" }); } catch {} location.replace("/login"); };
+const signedOut = (r) => { if (r.status === 401) { location.replace("/login"); throw new Error("signed out"); } return r; };
 const DAY = 570, OPEN = 9 * 3600 + 1800;   // office hours 09:30-19:00
 const LABEL = { occupied: "Occupied", working: "Working", not: "Not working", vacant: "Vacant", checking: "Checking…" };
-const COLOR = { occupied: "#5AA9FF", working: "#5AA9FF", not: "#F0A53A", vacant: "#6B7380", checking: "#6B7380" };
+const COLOR = { occupied: "#2563C9", working: "#2563C9", not: "#E08A00", vacant: "#8A93A0", checking: "#8A93A0" };
+const ON = { occupied: "#FFFFFF", working: "#FFFFFF", not: "#2B1700" };   // text on a coloured tag or badge
 const WARMUP = 45;   // s after start: model loading + the 15 s seated rule -- desks are not decided yet
 const pad = (n) => String(n).padStart(2, "0");
 const hm = (t) => { const d = new Date(t * 1000); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
@@ -192,20 +268,27 @@ function render(s) {
   $("stamp").textContent = new Date(now * 1000).toLocaleTimeString("en-GB");
   const starting = s.det_age == null, stalled = !starting && s.det_age > 5;
   const lc = $("liveChip"); lc.classList.toggle("off", !c.online || stalled);
-  lc.lastChild.textContent = !c.online ? "Camera offline" : starting ? "Starting" : stalled ? "Detector stalled" : "Live";
-  $("det").textContent = starting ? "starting" : `${s.det_ms} ms`;
-  const g = s.gpu || {}; $("gpu").textContent = g.temp != null ? `${g.temp} °C${g.hot ? " · hot" : ""}` : "—";
+  lc.lastChild.textContent = !c.online ? "Camera offline" : starting ? "Starting" : stalled ? "Detector stalled" : "Live · camera online";
+  const g = s.gpu || {};
+  lc.title = `Detector ${starting ? "starting" : s.det_ms + " ms"} · GPU ${g.temp != null ? g.temp + " °C" + (g.hot ? " (hot)" : "") : "—"}`;
+  lastDesks = c.desks;
   const act = c.mode.includes("activity");
   $("mode").textContent = (c.mode.startsWith("seat classifier") ? "Seat model" : "Box rule") + (act ? " + working model (beta)" : "") + " · updated every second";
   $("notNote").hidden = act;
   if (act) { $("lgWork").lastChild.textContent = "Working"; $("lgNot").hidden = false; }
   $("view").classList.toggle("down", !c.online);
-  if (!built) { pullFrames(c.id); built = true; }
+  if (!built) {   // the camera only for accounts allowed to see it (the server refuses it to the others too)
+    showUser(s.user);
+    const cam = !s.user || s.user.camera;
+    $("nocam").hidden = cam; $("img").hidden = !cam; $("blurBtn").hidden = !cam;
+    if (cam) pullFrames(c.id);
+    built = true;
+  }
 
   $("boxes").innerHTML = c.desks.map((d) => {
     const [l, t, w, h] = c.boxes[d.no], col = COLOR[d.state], vac = d.state === "vacant" || d.state === "checking";
-    return `<div class="box" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%;border-color:${col};border-style:${vac ? "dashed" : "solid"};background:${vac ? "transparent" : col + "26"}">
-      <span style="background:${vac ? "#1B2129" : col};color:${vac ? "#C9D0DA" : "#0B0E12"}">${d.no} · ${LABEL[d.state]}</span></div>`;
+    return `<div class="box" style="left:${l}%;top:${t}%;width:${w}%;height:${h}%;border-color:${col};border-style:${vac ? "dashed" : "solid"};background:${vac ? "transparent" : col + "1F"}">
+      <span style="background:${vac ? "#FFFFFF" : col};color:${vac ? "#4A5362" : ON[d.state]};${vac ? "border:1px solid #D5DBE3" : ""}">${d.no} · ${LABEL[d.state]}</span></div>`;
   }).join("");
 
   const atNow = c.desks.filter((d) => d.state !== "vacant" && d.state !== "checking").length;
@@ -220,7 +303,7 @@ function render(s) {
         ? `<i class="c-working" style="width:${r.working / total * 100}%"></i><i class="c-not" style="width:${r.not / total * 100}%"></i>`
         : `<i class="c-occupied" style="width:${r.at_desk / total * 100}%"></i>`) + `<i class="c-vacant" style="width:${r.vacant / total * 100}%"></i>` : "";
     return `<div class="card desk">
-      <div class="top"><span class="badge" style="background:${vac ? "#1B2129" : COLOR[d.state]};color:${vac ? "#A3ACB8" : "#0B0E12"}">${d.no}</span>
+      <div class="top"><span class="badge" style="background:${vac ? "#EEF1F4" : COLOR[d.state]};color:${vac ? "#4A5362" : ON[d.state]}">${d.no}</span>
         <div class="grow" style="min-width:0"><div class="name">Desk ${d.no}</div><div class="sub">${forTxt}</div></div>
         <span class="pill s-${d.state}">${LABEL[d.state]}</span></div>
       <div class="mini" role="img" aria-label="Today at desk ${r ? fmt(r.at_desk) : "—"}">${seg}</div>
@@ -258,12 +341,12 @@ function renderReport() {
 }
 
 async function pollState() {
-  try { render(await (await fetch("/state", { cache: "no-store" })).json()); }
-  catch { const lc = $("liveChip"); lc.classList.add("off"); lc.lastChild.textContent = "Dashboard disconnected"; }
+  try { render(await signedOut(await fetch("/state", { cache: "no-store" })).json()); }
+  catch (e) { if (e.message === "signed out") return; const lc = $("liveChip"); lc.classList.add("off"); lc.lastChild.textContent = "Dashboard disconnected"; }
   setTimeout(pollState, 1000);
 }
 async function pollReport() {
-  try { rep = await (await fetch(`/api/report?date=${today()}`, { cache: "no-store" })).json(); renderReport(); } catch {}
+  try { rep = await signedOut(await fetch(`/api/report?date=${today()}`, { cache: "no-store" })).json(); renderReport(); } catch {}
   setTimeout(pollReport, 30000);
 }
 pollReport(); pollState();

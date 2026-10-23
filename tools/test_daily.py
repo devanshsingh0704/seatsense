@@ -1,6 +1,6 @@
 import unittest
 
-from daily import activity_score, missing, pick_activity, seat_control, seat_score
+from daily import activity_score, missing, reported_activity, reported_times, pick_activity, seat_control, seat_score
 
 
 def seated(n, p):
@@ -53,6 +53,23 @@ class Missing(unittest.TestCase):
                 {"t": 240, "age": None, "online": True},      # just started, no answer yet
                 {"t": 300}]                                   # logged before ages were recorded: trusted
         self.assertEqual(missing(frames=[60, 120, 180, 240, 300], rows=rows), [120, 180, 240])
+
+
+class Reported(unittest.TestCase):
+    def test_times_the_user_reported_one_per_line(self):
+        self.assertEqual(reported_times("16:39 desk 3 standing\n\n# note\n09:05:30\n"), [16 * 3600 + 39 * 60, 9 * 3600 + 5 * 60 + 30])
+
+
+class ReportedActivity(unittest.TestCase):
+    REPORTS = [{"t": 100, "desk": 2, "kind": "not_working_shown_working"},
+               {"t": 100, "desk": 3, "kind": "not_seated_shown_occupied"},    # a seat report: not an activity crop
+               {"t": 5000, "desk": 1, "kind": "working_shown_not"}]           # no logged frame near it
+
+    def test_activity_reports_become_crops_at_the_nearest_logged_frame(self):
+        self.assertEqual(reported_activity(self.REPORTS, frame_ts=[60, 130, 200], have=set()), [(130, 2)])
+
+    def test_a_crop_already_picked_is_not_added_twice(self):
+        self.assertEqual(reported_activity(self.REPORTS, frame_ts=[60, 130], have={(130, 2)}), [])
 
 
 class Scores(unittest.TestCase):

@@ -19,3 +19,7 @@ zones/*.before_*.json
 zones/*.original.json
 zones/*.prev.json
 zones/d4_focus.json
+# sign-in: accounts (password hashes), HTTPS key and access log stay on the machine
+users.json
+certs/
+logs/

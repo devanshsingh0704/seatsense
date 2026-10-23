@@ -23,6 +23,7 @@ from pathlib import Path
 WS = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(WS / "tools"))
 from evaluate import calibrated, load_temperatures   # noqa: E402
+sys.path.insert(0, str(WS))
 ACT = WS / "recordings" / "activity"
 SCORES = WS / "models" / "daily_scores.jsonl"
 SEAT_EVERY = 8
@@ -80,6 +81,31 @@ def activity_unsure(rows, temperature=1.0):
     return [r for g, r in sorted(cal, key=lambda x: x[0]) if g < 0.5 - UNSURE[0]]
 
 
+def reported_times(text):
+    """reported.txt: one "HH:MM[:SS] [what was wrong]" per line, as the user saw it -> seconds of the day."""
+    out = []
+    for line in text.splitlines():
+        head = line.split()[0] if line.strip() and not line.startswith("#") else ""
+        if head[:2].isdigit():
+            h, m, *sec = head.split(":")
+            out.append(int(h) * 3600 + int(m) * 60 + (int(sec[0]) if sec else 0))
+    return out
+
+
+def reported_activity(reports, frame_ts, have, near_s=120):
+    """(frame t, desk) for each working / not-working mistake the user reported, at the nearest
+    logged frame, unless that crop is already in the set."""
+    from mistakes import CLAIM
+    out = []
+    for r in reports:
+        if CLAIM.get(r["kind"], (None,))[0] != "activity" or not frame_ts:
+            continue
+        tf = min(frame_ts, key=lambda t: abs(t - r["t"]))
+        if abs(tf - r["t"]) <= near_s and (tf, r["desk"]) not in have and (tf, r["desk"]) not in out:
+            out.append((tf, r["desk"]))
+    return out
+
+
 def pick_activity(rows, seed, max_unsure=MAX_UNSURE, control_n=CONTROL_N, temperature=1.0):
     """rows: [{"t", "box", "p_not"}] for every seated desk-minute -> the picked ones, flagged."""
     unsure = activity_unsure(rows, temperature)[:max_unsure]
@@ -126,7 +152,10 @@ def review(day):
     rows = logged(day)
     print(f"seat: {sum(bool(r.get('offline')) for r in rows)} of {len(rows)} minutes use an offline answer (live system down or stale)")
     control = seat_control(rows)
-    build(day, [], extra=control, temperature=temps["seat"])
+    rep = day / "reported.txt"   # mistakes the user saw live: confident errors uncertainty sampling never picks
+    reported = reported_times(rep.read_text()) if rep.exists() else []
+    build(day, reported, extra=control, temperature=temps["seat"])
+    print(f"seat: {len(reported)} reported mistake(s) added with 2 minutes either side")
     print(f"seat: {len(unsure(rows, temps['seat']))} of {len(rows)} minutes genuinely unsure (calibrated, T={temps['seat']})")
     (day / "control_d20.json").write_text(json.dumps(control))
 
@@ -143,6 +172,16 @@ def review(day):
     picked = pick_activity(seated, seed=day.name, temperature=temps["activity"])
     print(f"activity: {len(activity_unsure(seated, temps['activity']))} of {len(seated)} seated desk-minutes "
           f"genuinely unsure (calibrated, T={temps['activity']})")
+
+    # working / not-working mistakes the user reported live: their crops go in too, flagged
+    from mistakes import parse
+    reports = parse(rep.read_text()) if rep.exists() else []
+    extra = reported_activity(reports, [r["t"] for r in rows], {(e["t"], e["box"]) for e in picked})
+    for t, n in extra:
+        img = cv2.resize(cv2.imread(str(day / "frames" / f"d20_{t:05d}.jpg")), (1280, 720), interpolation=cv2.INTER_AREA)
+        p = model.predict(img, {n: tuple(v / 2 for v in boxes[n])})
+        picked.append({"t": t, "box": n, "p_not": round(p[n], 4), "unsure": False, "control": False, "reported": True})
+    print(f"activity: {len(extra)} reported working / not-working mistake(s) added")
 
     manifest = json.loads((ACT / "manifest.json").read_text())
     have = {m["file"] for m in manifest}

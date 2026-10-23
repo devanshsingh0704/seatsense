@@ -11,6 +11,7 @@ delivering frames freezes its desks rather than marking them vacant.
 import csv
 import json
 import os
+import ssl
 import subprocess
 import threading
 import time
@@ -24,6 +25,8 @@ import numpy as np
 from ultralytics import YOLO
 
 from presence import Desk, _inside_fraction, assign, load_boxes, seat_present
+import mistakes
+from auth import COOKIE, SESSION_S, Auth, cookie_token, gate
 import report
 import seat
 import activity
@@ -227,6 +230,23 @@ def minute_log_forever(cams):
                 fh.write(json.dumps(line) + "\n")
 
 
+def save_mistake(cam, texts, now):
+    """A reported mistake: its line in reported.txt, plus a full-resolution frame of this moment and
+    the live answer beside it, so the next labelling set holds exactly what the user saw."""
+    day = HERE / "recordings" / f"{now:%Y%m%d}-log"
+    (day / "frames").mkdir(parents=True, exist_ok=True)
+    with (day / "reported.txt").open("a") as fh:
+        fh.write("".join(t + "\n" for t in texts))
+    t = now.hour * 3600 + now.minute * 60 + now.second
+    snap = {"t": t, "desks": {str(n): [cam.desk_state(n), round(cam.p_sitting[n], 3) if n in cam.p_sitting else None] for n in cam.desks},
+            "age": time.time() - STATS["det_at"] if STATS["det_at"] else None, "online": cam.online(time.time()), "reported": True}
+    ok = subprocess.run(["timeout", "-k", "5", "20", "ffmpeg", "-loglevel", "error", "-y", "-rtsp_transport", "tcp", "-i", cam.url(),
+                         "-frames:v", "1", "-q:v", "2", str(day / "frames" / f"{cam.id}_{t:05d}.jpg")]).returncode == 0
+    if ok:   # a row without its frame would never be reviewed, so only write both
+        with (day / f"live_{cam.id}.jsonl").open("a") as fh:
+            fh.write(json.dumps(snap) + "\n")
+
+
 def report_for(cams, date, period):
     desks = [str(n) for n in cams[0].desks]
     dates = report.week_dates(date) if period == "week" else [date]
@@ -256,11 +276,12 @@ def state(cams):
                                    for n, d in c.desks.items()]} for c in cams]}
 
 
-def make_handler(cams):
+def make_handler(cams, auth):
     by_id = {c.id: c for c in cams}
 
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"   # keep-alive: one connection carries every frame request
+        timeout = 30                    # a connection idle this long is closed (frees its thread)
 
         def log_message(self, *a):
             pass
@@ -270,14 +291,38 @@ def make_handler(cams):
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Referrer-Policy", "no-referrer")
             for k, v in extra:
                 self.send_header(k, v)
             self.end_headers()
             self.wfile.write(body)
 
+        def who(self):
+            """(signed-in user or None, is this the frame logger's service key?)"""
+            return auth.user(cookie_token(self.headers.get("Cookie"))), auth.service(self.headers.get("X-Service-Key"))
+
+        def refuse(self, g):
+            if g == "login":
+                return self.send(303, b"", "text/plain", [("Location", "/login")])
+            msg = b'{"error": "sign in first"}' if g == 401 else b'{"error": "no camera access for this account"}'
+            return self.send(g, msg, "application/json")
+
+        def body(self):
+            return json.loads(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 4096)) or b"{}")
+
         def do_GET(self):
             path, _, query = self.path.partition("?")
             q = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+            user, service = self.who()
+            g = gate(path, user, service)
+            if g != "ok":
+                return self.refuse(g)
+            if path == "/login":
+                if user:
+                    return self.send(303, b"", "text/plain", [("Location", "/")])
+                return self.send(200, (HERE / "web" / "login.html").read_bytes(), "text/html")
             if path == "/":
                 return self.send(200, (HERE / "web" / "live.html").read_bytes(), "text/html")
             if path == "/reports":
@@ -296,11 +341,53 @@ def make_handler(cams):
                     return self.send(200, body.encode(), "text/csv",
                                      [("Content-Disposition", f'attachment; filename="desk-report-{period}-{date}.csv"')])
                 return self.send(200, json.dumps(r).encode(), "application/json")
+            if path == "/api/mistakes":
+                date = q.get("date") or datetime.now().strftime("%Y-%m-%d")
+                try:
+                    d = datetime.strptime(date, "%Y-%m-%d")
+                except ValueError:
+                    return self.send(400, b"date must be YYYY-MM-DD", "text/plain")
+                act = HERE / "recordings" / "activity"
+                out = mistakes.collect(HERE / "recordings" / f"{d:%Y%m%d}-log", mistakes.load_json(act / "manifest.json", []),
+                                       mistakes.load_json(act / "labels.json", {}))
+                return self.send(200, json.dumps(out).encode(), "application/json")
             if path == "/state":
-                return self.send(200, json.dumps(state(cams)).encode(), "application/json")
+                return self.send(200, json.dumps({**state(cams), "user": user}).encode(), "application/json")
             if path.startswith("/frame/") and path[7:] in by_id:
                 return self.frame(by_id[path[7:]], float(q.get("after", 0)), q.get("people") == "1", q.get("boxes") != "0")
             self.send(404, b"not found", "text/plain")
+
+        def do_POST(self):
+            user, service = self.who()
+            ip = self.client_address[0]
+            if self.path == "/login":
+                try:
+                    b = self.body()
+                    token = auth.login(str(b.get("name", ""))[:64], str(b.get("password", ""))[:256], ip)
+                except (ValueError, TypeError, AttributeError):
+                    token = None
+                if not token:   # one message for every failure: it never tells which accounts exist
+                    return self.send(401, b'{"error": "Wrong username or password. After 5 failed attempts the account is locked for 15 minutes."}',
+                                     "application/json")
+                return self.send(200, b'{"ok": true}', "application/json",
+                                 [("Set-Cookie", f"{COOKIE}={token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age={SESSION_S}")])
+            if self.path == "/logout":
+                auth.logout(cookie_token(self.headers.get("Cookie")), ip)
+                return self.send(200, b'{"ok": true}', "application/json",
+                                 [("Set-Cookie", f"{COOKIE}=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0")])
+            g = gate(self.path, user, service)
+            if g != "ok":
+                return self.refuse(g)
+            if self.path != "/api/mistake":
+                return self.send(404, b"not found", "text/plain")
+            try:
+                body = self.body()
+                cam, now = cams[0], datetime.now()
+                texts = mistakes.lines(body["desks"], list(cam.desks), now)
+            except (ValueError, TypeError, AttributeError, KeyError):
+                return self.send(400, b"mark at least one desk as wrong", "text/plain")
+            threading.Thread(target=save_mistake, args=(cam, texts, now), daemon=True).start()
+            self.send(200, json.dumps({"saved": texts}).encode(), "application/json")
 
         def frame(self, cam, after, people, boxes=True):
             """Pull, not push: the browser asks for the next frame only after showing the
@@ -316,6 +403,14 @@ def make_handler(cams):
     return Handler
 
 
+def use_tls(srv, cert, key):
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    ctx.load_cert_chain(cert, key)
+    # handshake in each request's own thread, not in the accept loop: one silent client must not stall the rest
+    srv.socket = ctx.wrap_socket(srv.socket, server_side=True, do_handshake_on_connect=False)
+
+
 def main():
     load_env()
     cams = [Camera(cid, ch, os.environ.get("CAMERA_NAME", name)) for cid, (ch, name) in CAMERAS.items()]
@@ -325,8 +420,18 @@ def main():
     threading.Thread(target=detect_forever, args=(model, cams), daemon=True).start()
     threading.Thread(target=gpu_forever, daemon=True).start()
     threading.Thread(target=minute_log_forever, args=(cams,), daemon=True).start()
-    print(f"dashboard on 127.0.0.1:{PORT} -- " + ", ".join(f"{c.id}: boxes {list(c.boxes)}" for c in cams), flush=True)
-    ThreadingHTTPServer(("127.0.0.1", PORT), make_handler(cams)).serve_forever()
+    (HERE / "logs").mkdir(exist_ok=True)
+    auth = Auth(HERE / "users.json", HERE / "logs" / "access.log", os.environ.get("DASH_SERVICE_KEY", ""))
+    cert, key = HERE / "certs" / "cert.pem", HERE / "certs" / "key.pem"
+    # HTTPS with a certificate: open to the office network, behind the sign-in. Without one the
+    # dashboard stays on 127.0.0.1 (SSH tunnel only): passwords never cross the network in clear.
+    host = "0.0.0.0" if cert.exists() and key.exists() else "127.0.0.1"
+    srv = ThreadingHTTPServer((host, PORT), make_handler(cams, auth))
+    if host == "0.0.0.0":
+        use_tls(srv, cert, key)
+    print(f"dashboard on {'https' if host == '0.0.0.0' else 'http'}://{host}:{PORT} -- "
+          + ", ".join(f"{c.id}: boxes {list(c.boxes)}" for c in cams) + f" -- {len(auth.users)} account(s)", flush=True)
+    srv.serve_forever()
 
 
 if __name__ == "__main__":
