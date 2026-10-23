@@ -1,0 +1,8 @@
+[Unit]
+Description=Desk Presence daily labelling set (19:10)
+
+[Timer]
+OnCalendar=Mon..Sat 19:10
+
+[Install]
+WantedBy=timers.target

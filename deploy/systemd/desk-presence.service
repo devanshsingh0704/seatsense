@@ -1,0 +1,8 @@
+[Unit]
+Description=Desk Presence dashboard (live.py)
+
+[Service]
+WorkingDirectory=%h/desk_presence_ws
+ExecStart=%h/miniconda3/bin/python3 live.py
+Restart=on-failure
+RestartSec=10

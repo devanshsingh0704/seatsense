@@ -1,0 +1,7 @@
+[Unit]
+Description=Desk Presence: build the day's labelling set
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/desk_presence_ws
+ExecStart=%h/miniconda3/bin/python3 tools/daily.py review today

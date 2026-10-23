@@ -1,0 +1,6 @@
+[Unit]
+Description=Desk Presence: stop after office hours
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl --user stop desk-day-start.service desk-presence.service desk-frame-logger.service

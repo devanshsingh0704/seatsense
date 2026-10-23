@@ -1,0 +1,8 @@
+[Unit]
+Description=Desk Presence office hours stop (19:00)
+
+[Timer]
+OnCalendar=Mon..Sat 19:00
+
+[Install]
+WantedBy=timers.target
