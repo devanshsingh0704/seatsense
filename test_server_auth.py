@@ -110,28 +110,85 @@ class SignedIn(unittest.TestCase):
 
 
 class Https(unittest.TestCase):
-    def test_serves_https_with_a_self_made_certificate(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            cert, key = Path(tmp) / "cert.pem", Path(tmp) / "key.pem"
-            subprocess.run(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj", "/CN=test",
-                            "-keyout", str(key), "-out", str(cert)], check=True, capture_output=True)
-            auth = Auth(Path(tmp) / "users.json", Path(tmp) / "access.log", service_key="")
-            srv = ThreadingHTTPServer(("127.0.0.1", 0), live.make_handler([live.Camera("d20", 20, "Camera D20")], auth))
-            live.use_tls(srv, cert, key)
-            threading.Thread(target=srv.serve_forever, daemon=True).start()
-            try:
-                ctx = ssl.create_default_context(cafile=str(cert))
-                ctx.check_hostname = False
-                with urllib.request.urlopen(f"https://127.0.0.1:{srv.server_address[1]}/login", context=ctx, timeout=5) as r:
+    """HTTPS on the port, and plain HTTP on the same port answered only with a redirect to HTTPS."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cert, key = Path(cls.tmp.name) / "cert.pem", Path(cls.tmp.name) / "key.pem"
+        subprocess.run(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj", "/CN=test",
+                        "-keyout", str(key), "-out", str(cert)], check=True, capture_output=True)
+        cls.auth = Auth(Path(cls.tmp.name) / "users.json", Path(cls.tmp.name) / "access.log", service_key="")
+        cls.auth.set_user("hr", PW, camera=True)
+        cls.srv = live.Server(("127.0.0.1", 0), live.make_handler([live.Camera("d20", 20, "Camera D20")], cls.auth))
+        live.use_tls(cls.srv, cert, key)
+        threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
+        cls.port = cls.srv.server_address[1]
+        cls.ctx = ssl.create_default_context(cafile=str(cert))
+        cls.ctx.check_hostname = False
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.srv.shutdown()
+        cls.tmp.cleanup()
+
+    def plain(self, raw):
+        """Send raw bytes as plain HTTP, return the whole reply."""
+        import socket
+        with socket.create_connection(("127.0.0.1", self.port), timeout=5) as s:
+            s.sendall(raw)
+            out = b""
+            while chunk := s.recv(4096):
+                out += chunk
+        return out.decode("latin-1")
+
+    def test_https_works(self):
+        with urllib.request.urlopen(f"https://127.0.0.1:{self.port}/login", context=self.ctx, timeout=5) as r:
+            self.assertEqual(r.status, 200)
+
+    def test_plain_http_is_redirected_to_the_same_page_over_https(self):
+        out = self.plain(f"GET /reports?date=2026-10-24 HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\n\r\n".encode())
+        self.assertTrue(out.startswith("HTTP/1.1 301"), out[:40])
+        self.assertIn(f"Location: https://127.0.0.1:{self.port}/reports?date=2026-10-24\r\n", out)
+
+    def test_redirect_never_points_to_a_foreign_host(self):
+        out = self.plain(b"GET /x HTTP/1.1\r\nHost: evil.example\r\n\r\n")
+        self.assertIn(f"Location: https://127.0.0.1:{self.port}/x\r\n", out)
+        self.assertNotIn("evil", out)
+
+    def test_redirect_carries_nothing_else(self):
+        out = self.plain(f"GET /a%0d%0aSet-Cookie:x HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\n\r\n".encode())
+        head = out.split("\r\n\r\n")[0]
+        self.assertNotIn("Set-Cookie", head.replace("Set-Cookie:x", ""))   # only inside the still-encoded path
+        self.assertNotIn("\r\nSet-Cookie", head)
+
+    def test_nothing_is_served_or_processed_over_plain_http(self):
+        body = json.dumps({"name": "hr", "password": PW})
+        out = self.plain(f"POST /login HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\nContent-Type: application/json\r\n"
+                         f"Content-Length: {len(body)}\r\n\r\n{body}".encode())
+        self.assertTrue(out.startswith("HTTP/1.1 301"))
+        log = Path(self.tmp.name) / "access.log"
+        self.assertNotIn("login ok", log.read_text() if log.exists() else "")   # the password was never checked
+        out = self.plain(f"GET /state HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\nCookie: dp_session=x\r\n\r\n".encode())
+        self.assertTrue(out.startswith("HTTP/1.1 301"))
+        self.assertNotIn("cameras", out)
+
+    def test_silent_clients_do_not_block_anyone_and_nothing_fills_the_log(self):
+        import contextlib, io, socket, time
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            with socket.create_connection(("127.0.0.1", self.port)):          # connects, says nothing
+                with urllib.request.urlopen(f"https://127.0.0.1:{self.port}/login", context=self.ctx, timeout=5) as r:
                     self.assertEqual(r.status, 200)
-                with self.assertRaises(Exception):   # plain HTTP is not answered on the HTTPS port
-                    urllib.request.urlopen(f"http://127.0.0.1:{srv.server_address[1]}/login", timeout=3).read()
-                import socket   # a client that connects and stays silent must not block everyone else
-                with socket.create_connection(("127.0.0.1", srv.server_address[1])):
-                    with urllib.request.urlopen(f"https://127.0.0.1:{srv.server_address[1]}/login", context=ctx, timeout=5) as r:
-                        self.assertEqual(r.status, 200)
-            finally:
-                srv.shutdown()
+            self.plain(b"garbage\r\n\r\n")
+            time.sleep(2.5)
+        self.assertNotIn("Traceback", err.getvalue())
+
+    def test_browser_security_headers(self):
+        with urllib.request.urlopen(f"https://127.0.0.1:{self.port}/login", context=self.ctx, timeout=5) as r:
+            csp = r.headers["Content-Security-Policy"]
+        for rule in ("default-src 'self'", "frame-ancestors 'none'", "form-action 'self'", "base-uri 'none'"):
+            self.assertIn(rule, csp)
 
 
 if __name__ == "__main__":

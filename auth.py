@@ -2,7 +2,8 @@
 
 Passwords are kept only as salted scrypt hashes (users.json, never in git). A session is a random
 token in an HttpOnly, Secure, SameSite=Strict cookie, valid 8 hours; sessions live in memory, so a
-restart signs everyone out. Five wrong passwords lock that account for 15 minutes. Camera access is
+restart signs everyone out. Five wrong passwords lock that account for 15 minutes; 20 failed sign-ins
+from one computer (any names) block that computer for 15 minutes. Camera access is
 per account and is enforced by gate(), on the server, not only hidden on the page.
 """
 import hashlib
@@ -16,6 +17,7 @@ from datetime import datetime
 
 SESSION_S = 8 * 3600
 LOCK_AFTER, LOCK_S = 5, 15 * 60
+IP_LIMIT = 20   # failed sign-ins from one computer (any names) in LOCK_S: that computer waits LOCK_S
 COOKIE = "dp_session"
 NAME = re.compile(r"^[A-Za-z0-9._-]{1,32}$")
 SCRYPT = {"n": 2 ** 14, "r": 8, "p": 1, "dklen": 32}
@@ -59,7 +61,7 @@ class Auth:
     def __init__(self, users_path, log_path, service_key):
         self.users_path, self.log_path, self.service_key = users_path, log_path, service_key
         self.users, self.mtime = {}, None
-        self.sessions, self.fails = {}, {}
+        self.sessions, self.fails, self.ip_fails = {}, {}, {}
         self._refresh()
 
     def _refresh(self):
@@ -105,12 +107,16 @@ class Auth:
     def login(self, name, password, ip, now=None):
         now = time.time() if now is None else now
         self._refresh()
+        if len([t for t in self.ip_fails.get(ip, []) if now - t < LOCK_S]) >= IP_LIMIT:
+            self._log(ip, name, "login refused (too many failures from this computer)")
+            return None
         if self.locked(name, now):
             self._log(ip, name, "login refused (locked)")
             return None
         u = self.users.get(name)
         ok = check_password(password, u["hash"] if u else DUMMY)   # same work for unknown names: no timing hint
         if u is None or not ok:
+            self.ip_fails[ip] = [t for t in self.ip_fails.get(ip, []) if now - t < LOCK_S] + [now]
             if u is not None:   # only real accounts collect failures (no memory growth from made-up names)
                 self.fails[name] = [t for t in self.fails.get(name, []) if now - t < LOCK_S] + [now]
             self._log(ip, name, "login failed" + (" -> locked 15 min" if self.locked(name, now) else ""))

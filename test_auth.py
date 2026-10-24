@@ -60,6 +60,16 @@ class Lockout(unittest.TestCase):
             a.login("hr", "wrong", "ip", now=T0 + 6)
             self.assertFalse(a.locked("hr", now=T0 + 7))
 
+    def test_one_computer_guessing_across_many_accounts_is_blocked(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a = make(tmp, hr=True)
+            for i in range(20):                                   # password spraying: a different name each time
+                a.login(f"user{i}", "guess", "10.0.0.66", now=T0 + i)
+            self.assertIsNone(a.login("hr", "correct horse", "10.0.0.66", now=T0 + 30))
+            self.assertIsNotNone(a.login("hr", "correct horse", "10.0.0.5", now=T0 + 31))   # other computers unaffected
+            self.assertIsNotNone(a.login("hr", "correct horse", "10.0.0.66", now=T0 + 15 * 60 + 30))
+            self.assertIn("10.0.0.66 hr login refused (too many failures from this computer)", (Path(tmp) / "access.log").read_text())
+
 
 class Sessions(unittest.TestCase):
     def test_session_lasts_8_hours_and_ends_on_logout(self):

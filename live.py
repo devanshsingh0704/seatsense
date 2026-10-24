@@ -11,7 +11,10 @@ delivering frames freezes its desks rather than marking them vacant.
 import csv
 import json
 import os
+import re
+import socket
 import ssl
+import sys
 import subprocess
 import threading
 import time
@@ -54,7 +57,10 @@ def load_env():
     for line in (HERE / ".env").read_text().splitlines():
         if "=" in line and not line.startswith("#"):
             k, v = line.split("=", 1)
-            os.environ.setdefault(k.strip(), v.strip())
+            v = v.strip()
+            if len(v) > 1 and v[0] == v[-1] and v[0] in "\"'":   # quoted, as bash needs for values with spaces
+                v = v[1:-1]
+            os.environ.setdefault(k.strip(), v)
 
 
 class Camera:
@@ -294,6 +300,12 @@ def make_handler(cams, auth):
             self.send_header("X-Frame-Options", "DENY")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Referrer-Policy", "no-referrer")
+            # only our own scripts, data and pictures; fonts from Google Fonts; never inside another site
+            self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+                             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; "
+                             "img-src 'self' blob: data:; connect-src 'self'; object-src 'none'; base-uri 'none'; "
+                             "form-action 'self'; frame-ancestors 'none'")
+            self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
             for k, v in extra:
                 self.send_header(k, v)
             self.end_headers()
@@ -403,12 +415,71 @@ def make_handler(cams, auth):
     return Handler
 
 
+class Server(ThreadingHTTPServer):
+    """HTTPS (use_tls) and, on the same port, plain HTTP answered only with a redirect to HTTPS.
+    Each connection is sorted in its own thread, so a silent or slow client never holds up the rest."""
+    daemon_threads = True
+    tls = None   # ssl.SSLContext from use_tls(); None = plain HTTP (the 127.0.0.1-only mode)
+
+    def finish_request(self, request, client_address):
+        if self.tls is None:
+            return super().finish_request(request, client_address)
+        request.settimeout(5)                       # a handshake that does not come in 5 s ends here
+        first = request.recv(1, socket.MSG_PEEK)
+        if not first:
+            return
+        if first != b"\x16":                       # not a TLS handshake: plain HTTP
+            return self.to_https(request)
+        conn = self.tls.wrap_socket(request, server_side=True)
+        try:
+            super().finish_request(conn, client_address)
+        finally:
+            conn.close()
+
+    def to_https(self, request):
+        """Read the plain request (at most 8 KB, 2 s), answer 301 to the same path over HTTPS, close.
+        Nothing in it is processed (no page, data or sign-in), and the redirect only ever points at
+        this machine: the Host header is used only when it names it (localhost / 127.0.0.1 / the
+        address the client connected to)."""
+        request.settimeout(2)
+        data = b""
+        try:
+            while b"\r\n\r\n" not in data and len(data) < 8192:
+                chunk = request.recv(1024)
+                if not chunk:
+                    break
+                data += chunk
+        except OSError:   # includes the timeout: answer with what arrived
+            pass
+        line, _, rest = data.partition(b"\r\n")
+        parts = line.split(b" ")
+        path = parts[1].decode("latin-1") if len(parts) == 3 and parts[1].startswith(b"/") else "/"
+        if len(path) > 2048 or not all(32 < ord(c) < 127 for c in path):
+            path = "/"
+        host = next((h.partition(b":")[2].strip().decode("latin-1") for h in rest.split(b"\r\n")
+                     if h.partition(b":")[0].strip().lower() == b"host"), "")
+        local, port = request.getsockname()[0], self.server_address[1]
+        name = host.rsplit(":", 1)[0] if re.fullmatch(r"[A-Za-z0-9.-]+(:\d{1,5})?", host) else ""
+        target = (host if ":" in host else f"{host}:{port}") if name in ("localhost", "127.0.0.1", local) else f"{local}:{port}"
+        try:
+            request.sendall(f"HTTP/1.1 301 Moved Permanently\r\nLocation: https://{target}{path}\r\n"
+                            "Content-Length: 0\r\nConnection: close\r\n\r\n".encode())
+        except OSError:
+            pass
+
+    def handle_error(self, request, client_address):
+        """Plain HTTP on the HTTPS port, or a connection dropped mid-request, is normal on a network
+        service: ignored quietly. Anything else is still logged in full."""
+        if isinstance(sys.exc_info()[1], (ssl.SSLError, ConnectionError, TimeoutError)):
+            return
+        super().handle_error(request, client_address)
+
+
 def use_tls(srv, cert, key):
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ctx.minimum_version = ssl.TLSVersion.TLSv1_2
     ctx.load_cert_chain(cert, key)
-    # handshake in each request's own thread, not in the accept loop: one silent client must not stall the rest
-    srv.socket = ctx.wrap_socket(srv.socket, server_side=True, do_handshake_on_connect=False)
+    srv.tls = ctx   # Server.finish_request sorts HTTPS from plain HTTP per connection
 
 
 def main():
@@ -426,7 +497,7 @@ def main():
     # HTTPS with a certificate: open to the office network, behind the sign-in. Without one the
     # dashboard stays on 127.0.0.1 (SSH tunnel only): passwords never cross the network in clear.
     host = "0.0.0.0" if cert.exists() and key.exists() else "127.0.0.1"
-    srv = ThreadingHTTPServer((host, PORT), make_handler(cams, auth))
+    srv = Server((host, PORT), make_handler(cams, auth))
     if host == "0.0.0.0":
         use_tls(srv, cert, key)
     print(f"dashboard on {'https' if host == '0.0.0.0' else 'http'}://{host}:{PORT} -- "
