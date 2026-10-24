@@ -176,6 +176,10 @@ def review(day):
     # working / not-working mistakes the user reported live: their crops go in too, flagged
     from mistakes import parse
     reports = parse(rep.read_text()) if rep.exists() else []
+    reported_keys = set(reported_activity(reports, [r["t"] for r in rows], set()))
+    for e in picked:   # a reported crop already picked as unsure or control still gets its banner
+        if (e["t"], e["box"]) in reported_keys:
+            e["reported"] = True
     extra = reported_activity(reports, [r["t"] for r in rows], {(e["t"], e["box"]) for e in picked})
     for t, n in extra:
         img = cv2.resize(cv2.imread(str(day / "frames" / f"d20_{t:05d}.jpg")), (1280, 720), interpolation=cv2.INTER_AREA)

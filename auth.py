@@ -96,6 +96,7 @@ class Auth:
         name = name if NAME.match(name or "") else "?"
         with self.log_path.open("a") as fh:
             fh.write(f"{datetime.now().isoformat(timespec='seconds')} {ip} {name} {event}\n")
+        os.chmod(self.log_path, 0o600)   # who signed in when: owner only, like users.json
 
     def locked(self, name, now=None):
         now = time.time() if now is None else now

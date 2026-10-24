@@ -95,6 +95,7 @@ class Sessions(unittest.TestCase):
             self.assertIn("login ok", log); self.assertIn("login failed", log); self.assertIn("logout", log)
             self.assertIn("10.0.0.9", log)
             self.assertNotIn("correct horse", log); self.assertNotIn("wrong", log.replace("login failed", ""))
+            self.assertEqual((Path(tmp) / "access.log").stat().st_mode & 0o777, 0o600)
 
 
 class Cookie(unittest.TestCase):
