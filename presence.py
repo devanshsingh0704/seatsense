@@ -38,6 +38,16 @@ def assign(persons, boxes, min_inside=MIN_INSIDE):
     return out
 
 
+# Two thresholds (24 Oct, leave-one-day-out on 4 days): a free desk is taken only at >= 0.75 (false
+# "sitting" from standing / leaning-in 121 -> 79, errors -14%, chosen by every fold), a taken desk is
+# kept while >= 0.5, so a seated person leaning or turning does not drop out.
+SEAT_ENTER, SEAT_STAY = 0.75, 0.5
+
+
+def seat_threshold(state):
+    return SEAT_ENTER if state == "vacant" else SEAT_STAY
+
+
 def seat_present(p_sitting, visitor_inside, staff_inside, threshold=0.5):
     """Seat-classifier decision for one box. A visitor (hi-vis vest) alone in the box never
     occupies it; with a staff member also there, the classifier decides as usual."""

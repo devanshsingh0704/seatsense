@@ -80,7 +80,7 @@ def main():
             self.wfile.write(body)
 
         def do_GET(self):
-            if self.path == "/":
+            if self.path.split("?")[0] == "/":   # "/?at=16:37" opens the page at that time
                 return self.send(200, (HERE / "label.html").read_bytes(), "text/html")
             if self.path == "/catalogue":
                 return self.send(200, json.dumps(catalogue(rec, only)).encode(), "application/json")

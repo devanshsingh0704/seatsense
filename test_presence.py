@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from presence import Desk, assign, load_boxes, seat_present
+from presence import SEAT_ENTER, SEAT_STAY, Desk, assign, load_boxes, seat_present, seat_threshold
 
 
 class LoadBoxes(unittest.TestCase):
@@ -112,6 +112,32 @@ class DeskOccupancy(unittest.TestCase):
         for t in range(0, 11):
             d.update(True, t)
         self.assertEqual(d.occupied_total(30), 30)
+
+
+class SeatThresholds(unittest.TestCase):
+    """Two thresholds: stronger evidence to take a desk (stops standing / leaning-in), the usual 0.5 to keep it."""
+
+    def feed(self, desk, p, t0, t1):
+        for t in range(t0, t1):
+            desk.update(seat_present(p, False, False, seat_threshold(desk.state)), t)
+
+    def test_values(self):
+        self.assertEqual((seat_threshold("vacant"), seat_threshold("occupied")), (SEAT_ENTER, SEAT_STAY))
+        self.assertEqual((SEAT_ENTER, SEAT_STAY), (0.75, 0.5))
+
+    def test_a_middling_score_does_not_take_a_free_desk(self):
+        d = Desk()
+        self.feed(d, 0.6, 0, 60)
+        self.assertEqual(d.state, "vacant")
+
+    def test_a_confident_score_takes_it_and_a_middling_one_keeps_it(self):
+        d = Desk()
+        self.feed(d, 0.9, 0, 20)
+        self.assertEqual(d.state, "occupied")
+        self.feed(d, 0.6, 20, 80)                    # a seated person leaning or turning: stays occupied
+        self.assertEqual(d.state, "occupied")
+        self.feed(d, 0.1, 80, 100)                   # really gone
+        self.assertEqual(d.state, "vacant")
 
 
 if __name__ == "__main__":

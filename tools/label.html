@@ -119,6 +119,12 @@ fetch("/catalogue").then(r => r.json()).then(c => {
   cat = c;   // open on the first camera that still has unlabelled frames
   cam = Object.keys(cat).find(k => cat[k].frames.some(f => !f.labelled)) || Object.keys(cat)[0];
   i = Math.max(0, cat[cam].frames.findIndex(f => !f.labelled));
+  // ?at=16:37 opens the frame nearest that time (to re-check a label)
+  const at = new URLSearchParams(location.search).get("at");
+  if (at && /^\d{1,2}:\d{2}$/.test(at)) {
+    const [h, m] = at.split(":").map(Number), want = h * 3600 + m * 60, fr = cat[cam].frames;
+    i = fr.reduce((best, f, k) => Math.abs(f.t - want) < Math.abs(fr[best].t - want) ? k : best, 0);
+  }
   show();
 });
 </script>

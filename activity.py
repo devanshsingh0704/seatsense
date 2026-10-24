@@ -20,6 +20,9 @@ def available(cam):
     return (HERE / "models" / f"activity_{cam}.pt").exists()
 
 
+NOT_AT = 0.7   # flag "not working" from 0.7, not 0.5 (24 Oct, unseen days): wrong flags 144 -> 109, caught 67% -> 63%
+
+
 class Activity:
     def __init__(self, not_after_s=20, back_after_s=10, gap_s=3):
         self.args = (not_after_s, back_after_s, gap_s)
@@ -29,7 +32,7 @@ class Activity:
         self.hold = Desk(*self.args)
 
     def update(self, p_not, now):
-        self.hold.update(p_not >= 0.5, now)
+        self.hold.update(p_not >= NOT_AT, now)
         return "not" if self.hold.state == "occupied" else "working"
 
 

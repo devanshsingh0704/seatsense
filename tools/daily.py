@@ -24,6 +24,7 @@ WS = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(WS / "tools"))
 from evaluate import calibrated, load_temperatures   # noqa: E402
 sys.path.insert(0, str(WS))
+from activity import NOT_AT   # noqa: E402  (the live "not working" threshold; torch is imported only by the model)
 ACT = WS / "recordings" / "activity"
 SCORES = WS / "models" / "daily_scores.jsonl"
 SEAT_EVERY = 8
@@ -133,7 +134,7 @@ def activity_score(manifest, labels):
         if not m.get("control") or a not in ("W", "P", "T", "I"):
             continue
         truth = "working" if a == "W" else "not"
-        ok = (m["p_not"] >= 0.5) == (truth == "not")
+        ok = (m["p_not"] >= NOT_AT) == (truth == "not")   # scored at the live system's threshold
         out["right"] += ok; out["total"] += 1
         out[truth][0] += ok; out[truth][1] += 1
     return out

@@ -27,7 +27,7 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 
-from presence import Desk, _inside_fraction, assign, load_boxes, seat_present
+from presence import Desk, _inside_fraction, assign, load_boxes, seat_present, seat_threshold
 import mistakes
 from auth import COOKIE, SESSION_S, Auth, cookie_token, gate
 import report
@@ -119,7 +119,8 @@ class Camera:
             self.p_sitting = self.seat.predict(frame, self.view_boxes)
             vis_src = [tuple(v * SRC_W / W for v in b) for b in self.visitors]
             present = {n: seat_present(self.p_sitting[n],
-                                       any(_inside_fraction(v, b) >= 0.5 for v in vis_src), bool(owners[n]))
+                                       any(_inside_fraction(v, b) >= 0.5 for v in vis_src), bool(owners[n]),
+                                       seat_threshold(self.desks[n].state))   # 0.75 to take a desk, 0.5 to keep it
                        for n, b in self.boxes.items()}
         else:
             owners = assign(src, self.boxes)

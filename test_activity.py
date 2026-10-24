@@ -1,6 +1,6 @@
 import unittest
 
-from activity import Activity
+from activity import NOT_AT, Activity
 
 
 def feed(a, seq):
@@ -36,6 +36,14 @@ class ActivityState(unittest.TestCase):
         feed(a, [(t, 0.9) for t in range(0, 21)])
         a.reset()
         self.assertEqual(a.update(0.9, 100), "working")
+
+
+class Threshold(unittest.TestCase):
+    def test_not_working_needs_a_score_of_0_7(self):
+        self.assertEqual(NOT_AT, 0.7)
+        a = Activity()
+        self.assertEqual(feed(a, [(t, 0.65) for t in range(0, 40)])[-1], "working")    # unsure: no flag
+        self.assertEqual(feed(a, [(t, 0.8) for t in range(40, 61)])[-1], "not")
 
 
 if __name__ == "__main__":
