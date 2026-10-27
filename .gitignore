@@ -1,5 +1,5 @@
 # secrets
-.env
+.env*
 # employee images, attendance data and models trained on them -- never on GitHub
 recordings/
 snapshots/
