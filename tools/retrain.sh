@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Retrain the models on everything labelled so far. Runs on the GPU laptop when the GPU is free (it is
-# shared); on Sundays tools/weekly.sh calls it only for models that passed tools/gate.py. Keeps the
+# shared). By hand only -- the Sunday job (tools/weekly.sh) puts the gate-tested candidate live instead. Keeps the
 # current models in models/history/<stamp>/ so a worse day can be rolled back; live.py picks the new
 # ones up on its next restart.
 #   tools/retrain.sh                 # both

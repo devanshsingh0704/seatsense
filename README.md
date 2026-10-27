@@ -155,9 +155,12 @@ flowchart LR
    is visible.
 5. **Retrain, gated, every Sunday** (`tools/weekly.sh`). Candidates are trained without the newest
    labelled day, then they and the live models are scored on that day's control sample, which
-   neither has seen. Only a model at least as good as the live one is retrained on everything and
-   switched in. The decision goes to `models/retrain_log.jsonl`, and the previous models are kept
-   so a worse week can be rolled back.
+   neither has seen. A candidate at least as good as the live model goes live as it is, so what
+   runs is exactly what was tested; the held-out day joins the training data the next week. With
+   fewer than 100 seat checks or 20 activity crops labelled in the control, the live model stays.
+   Nothing new labelled, a busy GPU or a failed training all leave the live models untouched.
+   Decisions go to `models/retrain_log.jsonl`; the replaced models go to `models/history/`, and
+   `tools/rollback.sh [stamp]` puts them back.
 
 ## What didn't work (and why)
 

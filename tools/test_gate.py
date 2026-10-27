@@ -13,6 +13,10 @@ class Decide(unittest.TestCase):
     def test_without_labelled_control_nothing_is_promoted(self):
         self.assertFalse(decide(live=(0, 0), cand=(0, 0)))
 
+    def test_too_few_samples_to_trust_keeps_the_live_model(self):
+        self.assertFalse(decide(live=(10, 19), cand=(19, 19), min_n=20))
+        self.assertTrue(decide(live=(10, 20), cand=(19, 20), min_n=20))
+
 
 class SeatAnswers(unittest.TestCase):
     def test_desks_at_or_above_half_count_as_seated(self):

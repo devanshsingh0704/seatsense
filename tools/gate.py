@@ -6,8 +6,10 @@
 `day` is the newest labelled day. The live models have never trained on it, and neither have the
 candidates (models/*_d20_cand.*, trained on every other day), so both are scored on its control
 sample: picked without looking at any model, scored as tools/daily.py scores a day (seat per frame at
-0.5, activity at the live threshold). A candidate at least as good as the live model is promoted;
-the decision is appended to models/retrain_log.jsonl.
+0.5, activity at the live threshold). A candidate at least as good as the live model is promoted
+(tools/weekly.sh puts that same candidate live, so what goes live is exactly what was tested), unless
+the day has fewer than MIN_N labelled control samples: then the live model stays. The decision is
+appended to models/retrain_log.jsonl.
 """
 import json
 import sys
@@ -18,10 +20,14 @@ WS = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(WS)); sys.path.insert(0, str(WS / "tools"))
 from daily import ACT, activity_score, seat_score   # noqa: E402
 
+# fewer labelled control samples than this and one sample can decide: keep the live model.
+# A full day's control is 30 frames x 6 desks = 180 seat checks and 30 activity crops.
+MIN_N = {"seat": 100, "activity": 20}
 
-def decide(live, cand):
+
+def decide(live, cand, min_n=1):
     """(right, total) of each on the same samples -> promote the candidate?"""
-    return cand[1] > 0 and cand[0] >= live[0]
+    return cand[1] >= min_n and cand[0] >= live[0]
 
 
 def seat_answers(p_by_t):
@@ -48,13 +54,14 @@ def main():
         p = {t: seat.predict(frame(t), boxes) for t in control if str(t) in labels}
         a = activity_score([{**m, "p_not": act.predict(frame(m["t"]), {m["box"]: boxes[m["box"]]})[m["box"]]} for m in crops], act_labels)
         scores[name] = {"seat": seat_score(seat_answers(p), labels, control), "activity": (a["right"], a["total"])}
-    promote = [m for m in ("seat", "activity") if decide(scores["d20"][m], scores["d20_cand"][m])]
+    promote = [m for m in ("seat", "activity") if decide(scores["d20"][m], scores["d20_cand"][m], MIN_N[m])]
+    why = {m: "promote" if m in promote else f"keep live: only {scores['d20_cand'][m][1]} labelled control samples (< {MIN_N[m]})"
+           if scores["d20_cand"][m][1] < MIN_N[m] else "keep live: candidate worse" for m in ("seat", "activity")}
     for m in ("seat", "activity"):
-        print(f"{m}: live {scores['d20'][m]} candidate {scores['d20_cand'][m]} -> "
-              f"{'promote' if m in promote else 'keep live'}", file=sys.stderr)
+        print(f"{m}: live {scores['d20'][m]} candidate {scores['d20_cand'][m]} -> {why[m]}", file=sys.stderr)
     with (WS / "models" / "retrain_log.jsonl").open("a") as fh:
         fh.write(json.dumps({"at": datetime.now().isoformat(timespec="seconds"), "day": day.name,
-                             "scores": scores, "promote": promote}) + "\n")
+                             "scores": scores, "promote": promote, "why": why}) + "\n")
     print(" ".join(promote))
 
 
