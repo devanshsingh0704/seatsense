@@ -1,0 +1,8 @@
+[Unit]
+Description=Desk Presence: weekly gated retrain
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/desk_presence_ws
+Environment=PY=%h/miniconda3/bin/python3
+ExecStart=%h/desk_presence_ws/tools/weekly.sh

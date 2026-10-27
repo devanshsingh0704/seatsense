@@ -4,6 +4,7 @@
     python3 tools/train_seat.py recordings/20261012-day [recordings/20261017-log ...] --cv   # honest 4-fold test
     python3 tools/train_seat.py recordings/20261012-day recordings/20261017-log --cv --by-day   # train on the other days, test on a new one
     python3 tools/train_seat.py recordings/20261012-day [recordings/20261017-log ...]        # train, save models/seat_d20.pt
+    python3 tools/train_seat.py ... --as d20_cand        # save as models/seat_d20_cand.pt (tools/weekly.sh: a candidate)
 
 Several folders: each needs labels_d20.json, d20_focus.json and frames/; only labelled frames are used.
 
@@ -26,6 +27,16 @@ MARGIN = 0.1
 SIZE = 224
 BLOCK_S, FOLDS = 1800, 4
 EPOCHS, BATCH, LR = 15, 64, 1e-3
+
+
+def option(args, flag, default):
+    """Remove `flag VALUE` from args (in place) and return VALUE, or default when absent."""
+    if flag not in args:
+        return default
+    i = args.index(flag)
+    value = args[i + 1]
+    del args[i:i + 2]
+    return value
 
 
 def build_examples(labels, boxes):
@@ -54,7 +65,9 @@ def main():
     from presence import load_boxes
     from train_posture import letterbox_size
 
-    days = [Path(a) for a in sys.argv[1:] if not a.startswith("--")]
+    args = sys.argv[1:]
+    name = option(args, "--as", CAM)
+    days = [Path(a) for a in args if not a.startswith("--")]
     cv = "--cv" in sys.argv
     by_day = "--by-day" in sys.argv
     boxes = load_boxes(days[0] / f"{CAM}_focus.json")
@@ -171,12 +184,12 @@ def main():
         (WS / "models" / f"seat_{CAM}_cv{tag}_rows.json").write_text(json.dumps(dump))   # every held-out answer, for analysis
     else:
         _, _, model = fit(ex, [])
-        torch.save(model.state_dict(), WS / "models" / f"seat_{CAM}.pt")
-        (WS / "models" / f"seat_{CAM}.json").write_text(json.dumps(
+        torch.save(model.state_dict(), WS / "models" / f"seat_{name}.pt")
+        (WS / "models" / f"seat_{name}.json").write_text(json.dumps(
             {"camera": CAM, "boxes": {n: b for n, b in boxes.items()}, "margin": MARGIN, "size": SIZE,
              "mean": mean, "std": std, "letterbox_fill": 114, "classes": ["empty", "sitting"],
              "trained_on": [str(d) for d in days], "examples": len(ex), "epochs": EPOCHS}, indent=1))
-        print(f"saved models/seat_{CAM}.pt")
+        print(f"saved models/seat_{name}.pt")
 
 
 if __name__ == "__main__":

@@ -57,5 +57,31 @@ class Calibrated(unittest.TestCase):
         self.assertEqual(select(rows, reported=[], every=1000, max_unsure=2), [0, 120, 240])
 
 
+class Budget(unittest.TestCase):
+    QUIET = Calibrated.QUIET
+
+    def day(self):
+        """minute 0-9: 0-1 desk 5 occupied (weak spot), 3 and 7 unsure (7 the closer to 50/50), the rest calm."""
+        rows = [row(60 * i, **self.QUIET) for i in range(10)]
+        for i in (0, 1):
+            rows[i] = row(60 * i, **{**self.QUIET, "d5": ("occupied", 0.99)})
+        rows[3] = row(180, **{**self.QUIET, "d3": ("vacant", 0.3)})
+        rows[7] = row(420, **{**self.QUIET, "d3": ("vacant", 0.45)})
+        return rows
+
+    def test_the_control_comes_before_unsure_and_weak_spots(self):
+        self.assertEqual(select(self.day(), reported=[], every=1000, extra=[300, 540], budget=3), [300, 420, 540])
+
+    def test_what_is_left_goes_to_unsure_then_weak_spots(self):
+        self.assertEqual(select(self.day(), reported=[], every=1000, extra=[300], budget=4), [0, 180, 300, 420])
+
+    def test_reported_and_control_are_always_kept_even_past_the_budget(self):
+        self.assertEqual(select(self.day(), reported=[300], every=1000, extra=[540], budget=0), [180, 240, 300, 360, 420, 540])
+
+    def test_no_budget_keeps_everything_as_before(self):
+        # 120 is the first remaining minute, the old built-in control
+        self.assertEqual(select(self.day(), reported=[], every=1000, extra=[300]), [0, 60, 120, 180, 300, 420])
+
+
 if __name__ == "__main__":
     unittest.main()

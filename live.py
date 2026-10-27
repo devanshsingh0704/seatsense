@@ -501,7 +501,10 @@ def main():
     srv = Server((host, PORT), make_handler(cams, auth))
     if host == "0.0.0.0":
         use_tls(srv, cert, key)
-    print(f"dashboard on {'https' if host == '0.0.0.0' else 'http'}://{host}:{PORT} -- "
+    # which code is running: deploys are `git push laptop main`, see README
+    commit = subprocess.run(["git", "-C", str(HERE), "describe", "--always", "--dirty"],
+                            capture_output=True, text=True).stdout.strip() or "unknown"
+    print(f"code {commit} -- dashboard on {'https' if host == '0.0.0.0' else 'http'}://{host}:{PORT} -- "
           + ", ".join(f"{c.id}: boxes {list(c.boxes)}" for c in cams) + f" -- {len(auth.users)} account(s)", flush=True)
     srv.serve_forever()
 

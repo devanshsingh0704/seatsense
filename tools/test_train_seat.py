@@ -1,6 +1,6 @@
 import unittest
 
-from train_seat import build_examples, fold_key, fold_of
+from train_seat import build_examples, fold_key, fold_of, option
 
 
 class BuildExamples(unittest.TestCase):
@@ -32,6 +32,16 @@ class FoldKey(unittest.TestCase):
     def test_by_day_holds_out_whole_days(self):
         self.assertEqual(fold_key(self.E, by_day=True), "recordings/20261012-day")
         self.assertNotEqual(fold_key(self.E, by_day=True), fold_key({**self.E, "dir": "recordings/20261017-log"}, by_day=True))
+
+
+class Option(unittest.TestCase):
+    def test_takes_the_value_out_of_the_arguments(self):
+        args = ["recordings/a", "--as", "d20_cand", "recordings/b", "--cv"]
+        self.assertEqual(option(args, "--as", "d20"), "d20_cand")
+        self.assertEqual(args, ["recordings/a", "recordings/b", "--cv"])
+
+    def test_default_when_absent(self):
+        self.assertEqual(option(["recordings/a"], "--as", "d20"), "d20")
 
 
 if __name__ == "__main__":

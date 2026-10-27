@@ -3,13 +3,21 @@
 
     python3 tools/daily.py review recordings/20261022-log    # after 19:00 (timer: review today): build both review sets
     python3 tools/daily.py score  recordings/20261022-log    # after labelling: that day's accuracy
+    python3 tools/daily.py backlog recordings/20261024-log   # a day that fell behind: label only its control
 
-review: the seat review set (tools/review_set.py: unsure minutes, desk 5, neighbours) plus every
-SEAT_EVERY-th logged minute as a plain control (minutes logged while live.py was down get an
+review: the seat review set (tools/review_set.py: unsure minutes, desk 5, neighbours) plus
+SEAT_CONTROL_N evenly spaced logged minutes as a plain control, capped at SEAT_BUDGET frames (minutes logged while live.py was down get an
 offline answer from the same seat model first) -> label on :8098 (tools/label.py <day>). For every
 desk the live system called occupied, the activity model scores the desk crop; the unsure ones
 (closest to 50/50, at most MAX_UNSURE) and a random CONTROL_N of all of them are appended to
 recordings/activity -> label on :8099 (tools/label_activity.py recordings/activity).
+
+Budget (27 Oct): about 30 min of labelling a day -> 90 seat frames + 60 activity crops. Uncapped, a full
+day was ~290 frames + ~118 crops and the labelling stopped after two days.
+
+backlog: for a day not labelled in time, keep only its control, reported moments and anything already
+labelled (other label frames go to label_frames_skipped/, a manifest backup is kept), so the honest
+score for that day is still possible without labelling the whole set.
 
 score: accuracy on the control samples only -- picked without looking at the model, from a day
 the models never trained on, so it is the honest number. Appended to models/daily_scores.jsonl.
@@ -17,23 +25,31 @@ Retraining (tools/train_seat.py, tools/train_activity.py) stays a separate step:
 """
 import json
 import random
+import shutil
 import sys
 from pathlib import Path
 
 WS = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(WS / "tools"))
 from evaluate import calibrated, load_temperatures   # noqa: E402
+from review_set import spread   # noqa: E402
 sys.path.insert(0, str(WS))
 from activity import NOT_AT   # noqa: E402  (the live "not working" threshold; torch is imported only by the model)
 ACT = WS / "recordings" / "activity"
 SCORES = WS / "models" / "daily_scores.jsonl"
-SEAT_EVERY = 8
+SEAT_BUDGET, SEAT_CONTROL_N = 90, 30
 UNSURE = (0.15, 0.85)        # on calibrated probabilities, like the seat review set
-MAX_UNSURE, CONTROL_N = 80, 40
+MAX_UNSURE, CONTROL_N = 30, 30
 
 
-def seat_control(rows, every=SEAT_EVERY):
-    return [r["t"] for r in rows[::every]]
+def seat_control(rows, n=SEAT_CONTROL_N):
+    """n logged minutes spread over the day, chosen without looking at the model."""
+    return spread([r["t"] for r in rows], n)
+
+
+def trim_manifest(manifest, day, labels):
+    """Drop `day`'s activity crops that are neither control, reported nor already labelled."""
+    return [m for m in manifest if m["dir"] != day or m.get("control") or m.get("reported") or m["file"] in labels]
 
 
 STALE_S = 10   # a live answer older than this was not looking at the frame (live.py skips its own log the same way)
@@ -155,7 +171,7 @@ def review(day):
     control = seat_control(rows)
     rep = day / "reported.txt"   # mistakes the user saw live: confident errors uncertainty sampling never picks
     reported = reported_times(rep.read_text()) if rep.exists() else []
-    build(day, reported, extra=control, temperature=temps["seat"])
+    build(day, reported, extra=control, temperature=temps["seat"], budget=SEAT_BUDGET)
     print(f"seat: {len(reported)} reported mistake(s) added with 2 minutes either side")
     print(f"seat: {len(unsure(rows, temps['seat']))} of {len(rows)} minutes genuinely unsure (calibrated, T={temps['seat']})")
     (day / "control_d20.json").write_text(json.dumps(control))
@@ -204,6 +220,27 @@ def review(day):
           f"({sum(e['unsure'] for e in picked)} unsure, {sum(e['control'] for e in picked)} control)")
 
 
+def backlog(day):
+    from review_set import logged, select
+    rep, lab = day / "reported.txt", day / "labels_d20.json"
+    keep = set(select(logged(day), reported_times(rep.read_text()) if rep.exists() else [],
+                      extra=json.loads((day / "control_d20.json").read_text()), budget=0))
+    keep |= {int(t) for t in (json.loads(lab.read_text()) if lab.exists() else {})}
+    skipped = day / "label_frames_skipped"
+    skipped.mkdir(exist_ok=True)
+    moved = 0
+    for f in sorted((day / "label_frames").glob("d20_*.jpg")):
+        if int(f.stem.split("_")[1]) not in keep:
+            f.rename(skipped / f.name)
+            moved += 1
+    man = json.loads((ACT / "manifest.json").read_text())
+    shutil.copy(ACT / "manifest.json", ACT / f"manifest.before_backlog_{day.name}.json")
+    kept = trim_manifest(man, day.name, json.loads((ACT / "labels.json").read_text()))
+    (ACT / "manifest.json").write_text(json.dumps(kept))
+    print(f"seat: {len(list((day / 'label_frames').glob('d20_*.jpg')))} frames left to label, {moved} moved to {skipped.name}/")
+    print(f"activity: {sum(m['dir'] == day.name for m in kept)} crops of {day.name} left, {len(man) - len(kept)} dropped")
+
+
 def score(day):
     pre = json.loads((day / "prelabels_d20.json").read_text())
     labels_f = day / "labels_d20.json"
@@ -226,4 +263,4 @@ if __name__ == "__main__":
     from datetime import date
     arg = sys.argv[2]
     day = WS / "recordings" / f"{date.today():%Y%m%d}-log" if arg == "today" else Path(arg)
-    {"review": review, "score": score}[sys.argv[1]](day)
+    {"review": review, "score": score, "backlog": backlog}[sys.argv[1]](day)

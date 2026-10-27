@@ -5,6 +5,7 @@
     python3 tools/train_activity.py recordings/activity --res 720 --cv     # same, at the live 1280x720 resolution
     python3 tools/train_activity.py recordings/activity --res 720 --cv --by-day   # leave one whole day out
     python3 tools/train_activity.py recordings/activity --res 720          # train, save models/activity_d20.pt
+    python3 tools/train_activity.py recordings/activity --res 720 --without 20261026-log --as d20_cand   # tools/weekly.sh
 
 Labels come from recordings/activity/labels.json (tools/label_activity.py): W working, P phone,
 T talking, I idle -> not working; U and unanswered are left out. Crops are cut fresh from the
@@ -44,13 +45,16 @@ def main():
     from crops import crop_box
     from presence import load_boxes
     from train_posture import letterbox_size
-    from train_seat import fold_key
+    from train_seat import fold_key, option
 
     root = Path(sys.argv[1])
     res = sys.argv[sys.argv.index("--res") + 1] if "--res" in sys.argv else "720"
     cv = "--cv" in sys.argv
     by_day = "--by-day" in sys.argv
-    ex = examples(json.loads((root / "manifest.json").read_text()), json.loads((root / "labels.json").read_text()))
+    args = sys.argv[1:]
+    name, without = option(args, "--as", "d20"), option(args, "--without", None)
+    ex = [e for e in examples(json.loads((root / "manifest.json").read_text()), json.loads((root / "labels.json").read_text()))
+          if e["dir"] != without]
     cache = root / f"train_{res}"
     cache.mkdir(exist_ok=True)
     for t_dir in sorted({e["dir"] for e in ex}):
@@ -146,12 +150,12 @@ def main():
         (WS / "models" / f"activity_d20_cv_{res}{'_byday' if by_day else ''}.json").write_text(json.dumps(rows))
     else:
         _, model = fit(ex, [])
-        torch.save(model.state_dict(), WS / "models" / "activity_d20.pt")
-        (WS / "models" / "activity_d20.json").write_text(json.dumps(
+        torch.save(model.state_dict(), WS / "models" / f"activity_{name}.pt")
+        (WS / "models" / f"activity_{name}.json").write_text(json.dumps(
             {"res": res, "margin": MARGIN, "size": SIZE, "max_side": MAX_SIDE, "mean": mean, "std": std,
              "letterbox_fill": 114, "classes": ["working", "not working"], "arch": "mobilenet_v3_large",
-             "examples": len(ex)}, indent=1))
-        print("saved models/activity_d20.pt")
+             "examples": len(ex), "trained_on": sorted({e["dir"] for e in ex})}, indent=1))
+        print(f"saved models/activity_{name}.pt")
 
 
 if __name__ == "__main__":

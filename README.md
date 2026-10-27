@@ -131,16 +131,20 @@ flowchart LR
     L[Frame logger<br/>1 frame / min] --> RV[19:10 review builder]
     RV -->|unsure + random control| LB[Labelling UI<br/>keyboard-driven]
     LB --> SC[Score on the control sample<br/>→ daily accuracy log]
-    SC --> TR[Retrain both models<br/>old models backed up]
-    TR -->|next day| L
+    SC --> TR[Sunday: retrain if not worse<br/>old models backed up]
+    TR -->|next week| L
 ```
 
 1. **Collect.** One full-resolution frame per minute during office hours, with the live system's answer.
-2. **Select.** Every evening the review builder picks:
+2. **Select.** Every evening the review builder fills a fixed budget (90 seat frames and 60 activity
+   crops, about 30 minutes of labelling) from:
    - **Uncertain** samples: seat minutes with a score between 0.05 and 0.95, and activity crops
      closest to 50/50.
    - **Known weak spots**, such as desks whose boxes overlap in the picture.
    - **A random control sample**, chosen without looking at the model.
+
+   Reported mistakes and the control are always kept. A day that was not labelled in time is cut
+   down to just those (`tools/daily.py backlog <day>`), so its honest score is still possible.
 
    If the live system was down, its missing answers are filled in by running the same model
    afterwards.
@@ -149,8 +153,11 @@ flowchart LR
 4. **Score.** Accuracy is computed **only on the random control sample** from a day the model has
    never trained on. That is the honest number, logged day by day, so the effect of each retrain
    is visible.
-5. **Retrain.** Both models are retrained on everything labelled so far. The previous models are
-   kept, so a worse day can be rolled back.
+5. **Retrain, gated, every Sunday** (`tools/weekly.sh`). Candidates are trained without the newest
+   labelled day, then they and the live models are scored on that day's control sample, which
+   neither has seen. Only a model at least as good as the live one is retrained on everything and
+   switched in. The decision goes to `models/retrain_log.jsonl`, and the previous models are kept
+   so a worse week can be rolled back.
 
 ## What didn't work (and why)
 
@@ -222,6 +229,17 @@ zones/             desk boxes per camera (pixel coordinates on the main stream)
    - open `http://localhost:8095` for the live view and `/reports` for the reports.
 
    The server listens on localhost only; reach it from another machine through an SSH tunnel.
+
+**Deploying a change** to the GPU machine, whose working copy is a git checkout that accepts pushes
+(`receive.denyCurrentBranch updateInstead`). A push is refused if anyone edited tracked files there.
+
+```
+git push laptop main
+ssh <user>@<gpu-host> 'systemctl --user try-restart desk-presence desk-frame-logger'
+```
+
+`try-restart` restarts only what is running, so a deploy outside office hours starts nothing. The
+journal's first line names the running commit (`code <hash> -- dashboard on ...`).
 
 Trained weights, recordings and labels are **not** in this repository; see Privacy below.
 

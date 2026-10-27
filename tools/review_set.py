@@ -7,7 +7,8 @@ Picked: the minutes where a desk is unsure (calibrated score between 0.05 and 0.
 closest to 50/50), desk 5 occupied (its known false
 alarm), neighbouring desks (1+4, 1+5) occupied together, every third such minute, the reported times
 (plus two minutes either side), and
-every EVERY-th remaining minute as a confident control. Writes label_frames/ (boxes drawn),
+every EVERY-th remaining minute as a confident control. tools/daily.py caps the set at a daily budget
+(see select()), because an uncapped full day was ~290 frames and the labelling stopped. Writes label_frames/ (boxes drawn),
 prelabels_d20.json (the live answer, as a starting point) and d20_focus.json beside frames/.
 """
 import json
@@ -37,19 +38,30 @@ def unsure(rows, temperature=1.0):
     return sorted(out)
 
 
-def select(rows, reported, every=EVERY, temperature=1.0, max_unsure=MAX_UNSURE):
-    picked = {t for _, t in unsure(rows, temperature)[:max_unsure]}
-    for r in rows:
-        if any(n == "5" and s != "vacant" for n, (s, _) in r["desks"].items()):
-            picked.add(r["t"])
-    pairs = [r["t"] for r in rows if r["t"] not in picked and any(
-        r["desks"].get(a, ["vacant"])[0] != "vacant" and r["desks"].get(b, ["vacant"])[0] != "vacant" for a, b in NEIGHBOURS)]
-    picked.update(pairs[::PAIR_EVERY])
+def spread(ts, n):
+    """At most n of ts, evenly spaced, so a cut does not keep only the morning."""
+    return list(ts) if len(ts) <= n else [ts[i * len(ts) // n] for i in range(n)]
+
+
+def select(rows, reported, every=EVERY, temperature=1.0, max_unsure=MAX_UNSURE, extra=(), budget=None):
+    """The minutes to label. With a budget, filled in priority order: reported mistakes (and two minutes
+    either side) and `extra` (the control) always; then the most unsure; then the weak spots (desk 5,
+    overlapping neighbours); then every `every`-th remaining minute."""
+    must = set(extra)
     for t in reported:                       # the reported minute and two either side
         for d in (-120, -60, 0, 60, 120):
-            picked.add(min((r["t"] for r in rows), key=lambda x: abs(x - (t + d))))
+            must.add(min((r["t"] for r in rows), key=lambda x: abs(x - (t + d))))
+    tiers = [[t for _, t in unsure(rows, temperature)[:max_unsure]]]
+    weak = [r["t"] for r in rows if any(n == "5" and s != "vacant" for n, (s, _) in r["desks"].items())]
+    pairs = [r["t"] for r in rows if r["t"] not in {*weak, *tiers[0]} and any(
+        r["desks"].get(a, ["vacant"])[0] != "vacant" and r["desks"].get(b, ["vacant"])[0] != "vacant" for a, b in NEIGHBOURS)]
+    tiers.append(sorted(weak + pairs[::PAIR_EVERY]))
+    picked = set(must)
+    for tier in tiers:
+        new = [t for t in tier if t not in picked]
+        picked.update(new if budget is None else spread(new, max(0, budget - len(picked))))
     rest = [r["t"] for r in rows if r["t"] not in picked]
-    picked.update(rest[::every])
+    picked.update(rest[::every] if budget is None else spread(rest[::every], max(0, budget - len(picked))))
     return sorted(picked)
 
 
@@ -65,14 +77,14 @@ def logged(day):
     return latest(r for r in rows if r["t"] in have)
 
 
-def build(day, reported, extra=(), temperature=1.0):
-    """Write the review set for `day`: the picked minutes plus `extra` ones. Returns them."""
+def build(day, reported, extra=(), temperature=1.0, budget=None):
+    """Write the review set for `day`: the picked minutes plus `extra` ones (see select). Returns them."""
     import cv2
     sys.path.insert(0, str(WS)); sys.path.insert(0, str(WS / "tools"))
     from extract import draw_boxes
     from presence import load_boxes
     rows = logged(day)
-    ts = sorted(set(select(rows, reported, temperature=temperature)) | set(extra))
+    ts = select(rows, reported, temperature=temperature, extra=extra, budget=budget)
     shutil.copy(WS / "zones" / "d20_focus.json", day / "d20_focus.json")
     boxes = load_boxes(day / "d20_focus.json")
     (day / "label_frames").mkdir(exist_ok=True)

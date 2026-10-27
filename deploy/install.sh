@@ -6,5 +6,5 @@ cd "$(dirname "$0")/.."
 mkdir -p ~/.config/systemd/user
 cp deploy/systemd/*.service deploy/systemd/*.timer ~/.config/systemd/user/
 systemctl --user daemon-reload
-systemctl --user enable --now desk-day-start.timer desk-day-stop.timer desk-daily-review.timer
+systemctl --user enable --now desk-day-start.timer desk-day-stop.timer desk-daily-review.timer desk-weekly-retrain.timer
 systemctl --user list-timers --no-pager | grep desk

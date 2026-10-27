@@ -1,6 +1,6 @@
 import unittest
 
-from daily import activity_score, missing, reported_activity, reported_times, pick_activity, seat_control, seat_score
+from daily import activity_score, missing, reported_activity, reported_times, pick_activity, seat_control, seat_score, trim_manifest
 
 
 def seated(n, p):
@@ -38,8 +38,21 @@ class PickActivityCalibrated(unittest.TestCase):
 
 
 class SeatControl(unittest.TestCase):
-    def test_every_nth_logged_minute_regardless_of_what_the_model_said(self):
-        self.assertEqual(seat_control([{"t": 60 * i} for i in range(10)], every=4), [0, 240, 480])
+    def test_n_evenly_spaced_logged_minutes_regardless_of_what_the_model_said(self):
+        self.assertEqual(seat_control([{"t": 60 * i} for i in range(10)], n=3), [0, 180, 360])
+
+    def test_a_short_day_keeps_every_minute(self):
+        self.assertEqual(seat_control([{"t": 60 * i} for i in range(3)], n=30), [0, 60, 120])
+
+
+class TrimManifest(unittest.TestCase):
+    def test_a_day_behind_keeps_only_control_reported_and_already_labelled_crops(self):
+        man = [{"file": "a", "dir": "d1", "control": False},
+               {"file": "b", "dir": "d1", "control": True},
+               {"file": "c", "dir": "d1", "control": False, "reported": True},
+               {"file": "e", "dir": "d1", "control": False},
+               {"file": "f", "dir": "d0", "control": False}]
+        self.assertEqual([m["file"] for m in trim_manifest(man, "d1", labels={"e": "W"})], ["b", "c", "e", "f"])
 
 
 class Missing(unittest.TestCase):
