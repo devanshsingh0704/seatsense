@@ -17,8 +17,7 @@ from torchvision.models import mobilenet_v3_small
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE / "tools"))
-from crops import crop_box                 # noqa: E402
-from train_posture import letterbox_size   # noqa: E402
+from crops import crop_box, letterbox_size   # noqa: E402
 
 
 def available(cam):

@@ -5,7 +5,7 @@
 (name cameras after the folder to label only those)
 
 Each frame starts from the model's answer (prelabels) or your earlier labels; you fix it.
-Saved after every frame to labels_<cam>.json, which tools/score.py reads.
+Saved after every frame to labels_<cam>.json, which tools/train_seat.py and tools/daily.py read.
 """
 import json
 import sys

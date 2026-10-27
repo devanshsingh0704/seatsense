@@ -45,8 +45,6 @@ DET_PERIOD = 1.0            # seconds between detection passes; desks don't need
 IMGSZ, CONF = 960, 0.35
 STALE_S = 5                 # no frame for this long = camera offline
 PORT = 8095
-# "classifier": the trained seat model decides each box (cameras that have one); "box": the 85%-inside rule
-DESK_MODE = os.environ.get("DESK_MODE", "classifier")
 LIME, YELLOW, CYAN, ORANGE = (0, 255, 0), (0, 255, 255), (255, 200, 0), (0, 140, 255)  # BGR
 
 EVENTS = deque(maxlen=50)
@@ -73,7 +71,7 @@ class Camera:
         self.frame, self.frame_t, self.status = None, 0.0, "connecting"
         self.persons = []   # [(x1, y1, x2, y2, conf, box)] in view pixels, inside a box only
         self.visitors = []  # [(x1, y1, x2, y2)] people in the visitor vest, never counted
-        self.seat = seat.SeatModel(cid) if DESK_MODE == "classifier" and seat.available(cid) else None
+        self.seat = seat.SeatModel(cid) if seat.available(cid) else None   # none yet: the 85%-inside box rule
         self.p_sitting = {}  # box -> latest classifier probability
         # beta: working / not working for occupied desks, when the activity model is there
         self.act = activity.ActivityModel(cid) if self.seat and activity.available(cid) else None

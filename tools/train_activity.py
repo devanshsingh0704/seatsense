@@ -42,9 +42,8 @@ def main():
     from torch.utils.data import DataLoader, Dataset
     from torchvision import transforms
     from torchvision.models import MobileNet_V3_Large_Weights, mobilenet_v3_large
-    from crops import crop_box
+    from crops import crop_box, letterbox_size
     from presence import load_boxes
-    from train_posture import letterbox_size
     from train_seat import fold_key, option
 
     root = Path(sys.argv[1])
@@ -154,7 +153,7 @@ def main():
         (WS / "models" / f"activity_{name}.json").write_text(json.dumps(
             {"res": res, "margin": MARGIN, "size": SIZE, "max_side": MAX_SIDE, "mean": mean, "std": std,
              "letterbox_fill": 114, "classes": ["working", "not working"], "arch": "mobilenet_v3_large",
-             "examples": len(ex), "trained_on": sorted({e["dir"] for e in ex})}, indent=1))
+             "examples": len(ex)}, indent=1))
         print(f"saved models/activity_{name}.pt")
 
 

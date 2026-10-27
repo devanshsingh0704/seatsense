@@ -61,9 +61,8 @@ def main():
     from torch.utils.data import DataLoader, Dataset
     from torchvision import transforms
     from torchvision.models import MobileNet_V3_Small_Weights, mobilenet_v3_small
-    from crops import crop_box
+    from crops import crop_box, letterbox_size
     from presence import load_boxes
-    from train_posture import letterbox_size
 
     args = sys.argv[1:]
     name = option(args, "--as", CAM)

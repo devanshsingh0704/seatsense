@@ -43,8 +43,7 @@ class ActivityModel:
         from torchvision import transforms
         from torchvision.models import mobilenet_v3_large
         sys.path.insert(0, str(HERE / "tools"))
-        from crops import crop_box
-        from train_posture import letterbox_size
+        from crops import crop_box, letterbox_size
         self.crop_box, self.letterbox_size = crop_box, letterbox_size
         meta = json.loads((HERE / "models" / f"activity_{cam}.json").read_text())
         self.margin, self.size, self.max_side, self.fill = meta["margin"], meta["size"], meta["max_side"], meta["letterbox_fill"]

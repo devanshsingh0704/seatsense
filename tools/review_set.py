@@ -77,11 +77,23 @@ def logged(day):
     return latest(r for r in rows if r["t"] in have)
 
 
+def draw_boxes(frame, boxes):
+    """The desk boxes (marked on the 2560-wide main stream) and their numbers on a 1280x720 frame, for labelling."""
+    import cv2
+    out = frame.copy()
+    for n, b in boxes.items():
+        x1, y1, x2, y2 = (round(v * 1280 / 2560) for v in b)
+        cv2.rectangle(out, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        (tw, th), _ = cv2.getTextSize(str(n), cv2.FONT_HERSHEY_SIMPLEX, 0.9, 2)
+        cv2.rectangle(out, (x1 + 4, y1 + 4), (x1 + 12 + tw, y1 + 12 + th), (0, 0, 0), -1)
+        cv2.putText(out, str(n), (x1 + 8, y1 + 8 + th), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 255), 2, cv2.LINE_AA)
+    return out
+
+
 def build(day, reported, extra=(), temperature=1.0, budget=None):
     """Write the review set for `day`: the picked minutes plus `extra` ones (see select). Returns them."""
     import cv2
     sys.path.insert(0, str(WS)); sys.path.insert(0, str(WS / "tools"))
-    from extract import draw_boxes
     from presence import load_boxes
     rows = logged(day)
     ts = select(rows, reported, temperature=temperature, extra=extra, budget=budget)
