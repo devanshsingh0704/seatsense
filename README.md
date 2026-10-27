@@ -10,8 +10,9 @@ per-desk reports. It improves through a daily human-in-the-loop cycle: the model
 frames it is unsure about, a person labels them, and the next model is trained and scored on
 data it has never seen.
 
-It runs on one GPU workstation next to the NVR. No cloud and no stored video: only one
-state per desk per minute.
+It runs on one GPU workstation next to the NVR. No cloud and no stored video: the reports keep
+one state per desk per minute, and the learning loop one camera frame per minute, deleted after
+14 days unless it was picked for labelling.
 
 ![Live view: desk states over the blurred camera picture, desk cards and today's timeline](docs/screenshots/dashboard-live.png)
 
@@ -250,7 +251,10 @@ Trained weights, recordings and labels are **not** in this repository; see Priva
 
 Built for a deployment where staff were informed and HR owns the data.
 
-- **No video is stored** by the live system, only one state per desk per minute.
+- **No video is stored.** The live system keeps one state per desk per minute (`states/`, kept).
+- **Frames for labelling:** the frame logger saves one still frame per minute in office hours.
+  Every night `tools/prune.py` deletes frames older than 14 days that were never picked for
+  labelling (about 470 of 570 a day). Labelled frames and their desk crops are kept as training data.
 - **Reports show desk numbers, not names.**
 - Training frames stay on the local machine. Camera images, labels, attendance logs and trained
   weights are excluded from this repository.
