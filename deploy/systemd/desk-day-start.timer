@@ -4,6 +4,9 @@ Description=Desk Presence office hours start (Mon-Sat 09:30)
 [Timer]
 OnCalendar=Mon..Sat 09:30
 Persistent=true
+# also 2 minutes after every start of the machine (a reboot during office hours, as on 30 Oct);
+# tools/day_start.sh itself refuses Sundays and times outside 09:30-19:00
+OnStartupSec=2min
 
 [Install]
 WantedBy=timers.target

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Office-hours start (desk-day-start.timer, 09:30 Mon-Sat; also after a reboot that missed it):
+# Office-hours start (desk-day-start.timer: 09:30 Mon-Sat, and 2 min after every boot):
 # start the dashboard and the frame logger once the shared GPU has room, never outside 09:30-19:00.
 set -u
 NEED_MB=3000   # the dashboard's models need about 1.5-2 GB; keep headroom for the other projects
+[ "$(date +%u)" = 7 ] && { echo "Sunday: office closed, not starting"; exit 0; }
 while :; do
     now=$(date +%H%M)
     [ "$now" -ge 1900 ] && { echo "after 19:00: not starting today"; exit 0; }
