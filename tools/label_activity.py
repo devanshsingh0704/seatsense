@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Label seated people as working / not working, for the activity model.
 
-    python3 tools/label_activity.py recordings/activity      ->  http://localhost:8099
+    python3 tools/label_activity.py recordings/activity [--port 8100]   ->  http://localhost:8099 (or the port given)
 
 One crop per seated person (made by tools/activity_crops.py, listed in manifest.json).
 Keys: W working · P phone · T talking/turned away · I idle/other · U unclear (not trained on).
@@ -32,6 +32,7 @@ def to_state(answer):
 
 def main():
     root = Path(sys.argv[1]).resolve()
+    port = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else PORT   # 8099 may be taken by another project
     manifest = json.loads((root / "manifest.json").read_text())
     files = {m["file"] for m in manifest}
     labels_file = root / "labels.json"
@@ -69,8 +70,8 @@ def main():
             labels_file.write_text(json.dumps(labels, indent=1))
             self.send(200, b"saved", "text/plain")
 
-    print(f"labelling {len(manifest)} seated people on http://localhost:{PORT}")
-    ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+    print(f"labelling {len(manifest)} seated people on http://localhost:{port}")
+    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
 
 
 if __name__ == "__main__":
