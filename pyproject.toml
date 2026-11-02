@@ -1,0 +1,29 @@
+[project]
+name = "seatsense"
+version = "1.0.0"
+description = "Real-time desk occupancy and activity analytics from an existing CCTV camera, with a human-in-the-loop retraining cycle"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = [   # tested versions: requirements.txt
+    "torch>=2.7",
+    "torchvision>=0.22",
+    "ultralytics>=8.4",
+    "opencv-python>=4.10",
+    "numpy>=2.0",
+    "pillow>=11.0",
+]
+
+[project.urls]
+Repository = "https://github.com/devanshsingh0704/seatsense"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["seatsense", "training", "labelling", "scripts"]
+
+[tool.setuptools.package-data]
+seatsense = ["web/*.html"]
+labelling = ["*.html"]

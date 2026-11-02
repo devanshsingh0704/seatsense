@@ -1,8 +1,8 @@
 [Unit]
-Description=Desk Presence dashboard (live.py)
+Description=Desk Presence dashboard (seatsense/app.py)
 
 [Service]
 WorkingDirectory=%h/desk_presence_ws
-ExecStart=%h/miniconda3/bin/python3 live.py
+ExecStart=%h/miniconda3/bin/python3 -m seatsense.app
 Restart=on-failure
 RestartSec=10

@@ -4,5 +4,5 @@ Description=Desk Presence: start for office hours when the GPU has room
 [Service]
 Type=oneshot
 WorkingDirectory=%h/desk_presence_ws
-ExecStart=%h/desk_presence_ws/tools/day_start.sh
+ExecStart=%h/desk_presence_ws/scripts/day_start.sh
 TimeoutStartSec=12h

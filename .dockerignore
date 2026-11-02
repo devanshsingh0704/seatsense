@@ -1,0 +1,7 @@
+# only the code goes into the image; data is mounted at run time
+*
+!seatsense/
+!training/
+!labelling/
+!scripts/
+**/__pycache__

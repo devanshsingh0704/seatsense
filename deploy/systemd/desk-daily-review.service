@@ -4,6 +4,6 @@ Description=Desk Presence: build the day's labelling set
 [Service]
 Type=oneshot
 WorkingDirectory=%h/desk_presence_ws
-ExecStart=%h/miniconda3/bin/python3 tools/daily.py review today
+ExecStart=%h/miniconda3/bin/python3 -m training.daily review today
 # then the retention rule: frames older than 14 days that were never picked for labelling go
-ExecStart=%h/miniconda3/bin/python3 tools/prune.py
+ExecStart=%h/miniconda3/bin/python3 -m scripts.prune

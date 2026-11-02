@@ -1,0 +1,4 @@
+#!/bin/sh
+# Refuses a commit that would publish private data (see scripts/privacy_check.py).
+# Enable once per clone:  git config core.hooksPath .githooks
+exec python3 -m scripts.privacy_check --staged

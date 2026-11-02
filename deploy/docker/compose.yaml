@@ -1,0 +1,27 @@
+# Run SeatSense with Docker Compose on a host with an NVIDIA GPU (NVIDIA Container Toolkit).
+#   cd deploy/docker && docker compose up -d --build
+# The data directory (default: the repository root) must hold .env, config/zones/<cam>_focus.json
+# and models/ (yolo26m.pt plus the trained seat_/activity_ models); see the README.
+services:
+  seatsense:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    image: seatsense
+    restart: unless-stopped
+    # run as the owner of the data directory, so files written there stay editable outside Docker
+    # (export SEATSENSE_UID=$(id -u) SEATSENSE_GID=$(id -g) if yours are not 1000)
+    user: "${SEATSENSE_UID:-1000}:${SEATSENSE_GID:-1000}"
+    volumes:
+      - ${SEATSENSE_DATA:-../..}:/data
+    ports:
+      # This machine only, unless certs/ holds a certificate: then the dashboard is HTTPS with
+      # sign-in and you may publish it to the network ("8095:8095").
+      - "127.0.0.1:8095:8095"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

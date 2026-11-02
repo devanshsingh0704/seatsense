@@ -3,6 +3,6 @@ Description=Desk Presence frame logger (one frame per minute for labelling)
 
 [Service]
 WorkingDirectory=%h/desk_presence_ws
-ExecStart=%h/desk_presence_ws/tools/frame_logger.sh
+ExecStart=%h/desk_presence_ws/scripts/frame_logger.sh
 Restart=on-failure
 RestartSec=10
