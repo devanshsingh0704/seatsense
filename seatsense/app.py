@@ -85,17 +85,36 @@ class Camera:
 
     def read_forever(self):
         backoff, size = 2, W * H * 3
-        cmd = ["ffmpeg", "-loglevel", "error", "-rtsp_transport", "tcp", "-i", self.url(), "-an",
-               "-vf", f"fps={VIEW_FPS},scale={W}:{H}", "-pix_fmt", "bgr24", "-f", "rawvideo", "-"]
+        # 2026-11-03: 2 decode threads + 1 filter thread = same frames (md5-checked), ~40% less CPU than auto threads
+        cmd = ["ffmpeg", "-loglevel", "error", "-rtsp_transport", "tcp", "-threads", "2", "-i", self.url(), "-an",
+               "-filter_threads", "1", "-vf", f"fps={VIEW_FPS},scale={W}:{H}", "-pix_fmt", "bgr24", "-f", "rawvideo", "-"]
+        # 2026-11-16: decode on the NVIDIA video engine, then the same CPU scale as above. Checked on 30 s of D20:
+        # all 300 frames byte-identical (framemd5), 19.3 s -> 8.8 s of CPU. Old pipeline:  HWDEC=0 in the environment.
+        # The CPU pipeline is used only if the GPU one never gave a frame since start (3 tries); a camera that
+        # drops out later just reconnects (2026-11-17: a 4-min D20 outage had switched it to the CPU for the day).
+        cpu_cmd, gpu_ok, gpu_fails = cmd, False, 0
+        if os.environ.get("HWDEC", "1") != "0":
+            cmd = ["ffmpeg", "-loglevel", "error", "-rtsp_transport", "tcp", "-hwaccel", "cuda",
+                   "-hwaccel_output_format", "cuda", "-i", self.url(), "-an", "-filter_threads", "1",
+                   "-vf", f"fps={VIEW_FPS},hwdownload,format=nv12,format=yuv420p,scale={W}:{H}",
+                   "-pix_fmt", "bgr24", "-f", "rawvideo", "-"]
         while True:
+            got = False
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
             # a stream that dies without closing would block the read below forever
             threading.Thread(target=watch, args=(proc, lambda: self.frame_t), kwargs={"stall_s": 15}, daemon=True).start()
             while len(buf := proc.stdout.read(size)) == size:
                 self.frame = np.frombuffer(buf, np.uint8).reshape(H, W, 3)
                 self.frame_t, self.status, backoff = time.time(), "live", 2
+                got = True
             proc.kill()
             proc.wait()
+            if cmd is not cpu_cmd:
+                gpu_ok = gpu_ok or got
+                gpu_fails = 0 if got else gpu_fails + 1
+                if not gpu_ok and gpu_fails >= 3:
+                    cmd = cpu_cmd
+                    print(f"[{self.id}] no frame from the GPU decoder, using the CPU decoder", flush=True)
             self.status = f"reconnecting in {backoff} s"
             print(f"[{self.id}] stream lost, {self.status}", flush=True)
             time.sleep(backoff)

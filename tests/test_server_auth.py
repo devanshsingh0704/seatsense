@@ -198,6 +198,62 @@ class Https(unittest.TestCase):
             self.assertIn(rule, csp)
 
 
+class Decoder(unittest.TestCase):
+    """The camera is decoded on the GPU's video engine; the CPU decoder takes over only if the GPU one
+    never gave a frame since start (3 tries). A camera outage later must not move it to the CPU."""
+
+    def attempts(self, frames, env=None):
+        """Run read_forever for len(frames) connections (frames[i] = frames the i-th one delivers);
+        return the ffmpeg command of each."""
+        import contextlib
+        import io
+        import os
+        from unittest import mock
+        cmds, sleeps = [], []
+
+        class Proc:
+            def __init__(self, cmd, **_):
+                cmds.append(cmd)
+                self.stdout = io.BytesIO(bytes(live.W * live.H * 3 * frames[len(cmds) - 1]))
+            kill = wait = lambda self: None
+
+        class Done(Exception):
+            pass
+
+        def sleep(_):
+            sleeps.append(_)
+            if len(sleeps) == len(frames):
+                raise Done
+        fake_sub = types.SimpleNamespace(Popen=Proc, PIPE=-1, DEVNULL=-3)
+        with mock.patch.object(live, "subprocess", fake_sub), \
+                mock.patch.object(live, "time", types.SimpleNamespace(time=lambda: 0.0, sleep=sleep)), \
+                mock.patch.object(live, "watch", lambda *a, **k: None), \
+                mock.patch.dict(os.environ, {"NVR_USER": "u", "NVR_PASS": "p", "NVR_HOST": "h", **(env or {})}), \
+                contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(Done):
+                live.Camera("d20", 20, "Camera D20").read_forever()
+        return cmds
+
+    def test_gpu_decoder_by_default(self):
+        cmds = self.attempts([5, 0])
+        self.assertIn("-hwaccel", cmds[0])
+        self.assertIn("hwdownload", " ".join(cmds[0]))
+
+    def test_cpu_decoder_only_if_the_gpu_never_worked(self):
+        gpu = ["-hwaccel" in c for c in self.attempts([0, 0, 0, 0, 0])]
+        self.assertEqual(gpu, [True, True, True, False, False])
+
+    def test_an_outage_after_the_gpu_worked_keeps_the_gpu(self):
+        gpu = ["-hwaccel" in c for c in self.attempts([5, 0, 0, 0, 0])]
+        self.assertEqual(gpu, [True] * 5)
+
+    def test_hwdec_0_is_the_measured_cpu_pipeline(self):
+        cmd = self.attempts([0, 0], env={"HWDEC": "0"})[0]
+        self.assertNotIn("-hwaccel", cmd)
+        self.assertEqual(cmd[cmd.index("-threads") + 1], "2")
+        self.assertEqual(cmd[cmd.index("-filter_threads") + 1], "1")
+
+
 class Listen(unittest.TestCase):
     """Where the server listens: never plain HTTP on the network unless asked for explicitly."""
 

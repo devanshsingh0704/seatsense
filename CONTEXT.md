@@ -33,6 +33,7 @@ gated retrain replaces a model only if it is at least as good on a day neither m
 | **Activity: "not working" from 0.7** | Wrong flags −24% on unseen days; on the daily check samples it removed false flags without losing a single real catch. A wrong "not working" costs more (it accuses someone) than a missed one. |
 | **Holds: 15 s to occupy, 10 s to vacate, 20 s to "not working"** | One wrong frame must never change a report; a glance at a phone must never count. The 10 s was the user's choice (faster departures). |
 | **Missing data is "no data", never "vacant"** | Nobody may be shown absent while the system was blind. |
+| **Camera decoded on the GPU's video engine** (`HWDEC=0` for the CPU) | Byte-identical frames (300 checked), CPU time 19.3 s → 8.8 s per 30 s of video. The CPU decoder takes over only if the GPU one never worked since start: a 4-minute camera outage had once moved it to the CPU for the whole day. |
 
 ## How we evaluate (do not weaken this)
 
