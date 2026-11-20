@@ -264,8 +264,8 @@ def save_mistake(cam, texts, now):
     t = now.hour * 3600 + now.minute * 60 + now.second
     snap = {"t": t, "desks": {str(n): [cam.desk_state(n), round(cam.p_sitting[n], 3) if n in cam.p_sitting else None] for n in cam.desks},
             "age": time.time() - STATS["det_at"] if STATS["det_at"] else None, "online": cam.online(time.time()), "reported": True}
-    ok = subprocess.run(["timeout", "-k", "5", "20", "ffmpeg", "-loglevel", "error", "-y", "-rtsp_transport", "tcp", "-i", cam.url(),
-                         "-frames:v", "1", "-q:v", "2", str(day / "frames" / f"{cam.id}_{t:05d}.jpg")]).returncode == 0
+    grab = Path(__file__).resolve().parent.parent / "scripts" / "grab_frame.sh"   # whole frame or none
+    ok = subprocess.run([str(grab), cam.url(), str(day / "frames" / f"{cam.id}_{t:05d}.jpg")]).returncode == 0
     if ok:   # a row without its frame would never be reviewed, so only write both
         with (day / f"live_{cam.id}.jsonl").open("a") as fh:
             fh.write(json.dumps(snap) + "\n")

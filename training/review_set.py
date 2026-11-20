@@ -69,10 +69,16 @@ def latest(rows):
     return sorted({r["t"]: r for r in rows}.values(), key=lambda r: r["t"])
 
 
+def frame_times(day):
+    """Seconds of the day that have a frame. An empty file is not a frame (a grab cut off by its timeout
+    once left one, and reading it crashed the evening's labelling set)."""
+    return {int(f.stem.split("_")[1]) for f in (day / "frames").glob("d20_*.jpg") if f.stat().st_size}
+
+
 def logged(day):
     """The answers for the minutes that have a frame."""
     rows = [json.loads(l) for l in (day / "live_d20.jsonl").read_text().splitlines() if l.strip()]
-    have = {int(f.stem.split("_")[1]) for f in (day / "frames").glob("d20_*.jpg")}
+    have = frame_times(day)
     return latest(r for r in rows if r["t"] in have)
 
 

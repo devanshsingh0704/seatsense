@@ -14,8 +14,7 @@ while :; do
     h=$(date +%H); [ "$h" -ge 9 ] && [ "$h" -lt 19 ] || continue
     D=recordings/$(date +%Y%m%d)-log; mkdir -p "$D/frames"
     t=$(( $(date +%s) - $(date -d 00:00 +%s) ))
-    timeout -k 5 20 ffmpeg -loglevel error -y -rtsp_transport tcp -i "$URL" -frames:v 1 -q:v 2 \
-        "$D/frames/d20_$(printf %05d "$t").jpg" || echo "$(date +%T) frame grab failed"
+    scripts/grab_frame.sh "$URL" "$D/frames/d20_$(printf %05d "$t").jpg" || echo "$(date +%T) frame grab failed"
     K="X-Service-Key: ${DASH_SERVICE_KEY:-}"   # the dashboard's sign-in lets this key read /state only
     timeout -k 2 8 sh -c "curl -sfk -m 3 -H '$K' https://127.0.0.1:8095/state || curl -sf -m 3 -H '$K' http://127.0.0.1:8095/state" | python3 -c "
 import json, sys

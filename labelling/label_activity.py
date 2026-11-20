@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Label seated people as working / not working, for the activity model.
 
-    python3 -m labelling.label_activity recordings/activity [--port 8100]   ->  http://localhost:8099 (or the port given)
+    python3 -m labelling.label_activity recordings/activity [--port 8100] [--days 20261117-log,20261118-log]
+        ->  http://localhost:8099 (or the port given); --days shows only those days' crops
 
 One crop per seated person (made by training/activity_crops.py, listed in manifest.json).
 Keys: W working · P phone · T talking/turned away · I idle/other · U unclear (not trained on).
@@ -26,6 +27,11 @@ def validate(labels, files):
     return labels
 
 
+def shown(manifest, days):
+    """The crops to show: only those of `days` when given (labels of other crops are kept as they are)."""
+    return [m for m in manifest if not days or m["dir"] in days]
+
+
 def to_state(answer):
     return ANSWERS[answer]
 
@@ -34,7 +40,9 @@ def main():
     root = Path(sys.argv[1]).resolve()
     port = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else PORT   # 8099 may be taken by another project
     manifest = json.loads((root / "manifest.json").read_text())
-    files = {m["file"] for m in manifest}
+    files = {m["file"] for m in manifest}   # every crop stays valid to save, shown or not
+    days = sys.argv[sys.argv.index("--days") + 1].split(",") if "--days" in sys.argv else []
+    crops = shown(manifest, days)
     labels_file = root / "labels.json"
 
     class Handler(BaseHTTPRequestHandler):
@@ -54,7 +62,7 @@ def main():
                 return self.send(200, (HERE / "label_activity.html").read_bytes(), "text/html")
             if self.path == "/data":
                 done = json.loads(labels_file.read_text()) if labels_file.exists() else {}
-                return self.send(200, json.dumps({"crops": manifest, "labels": done}).encode(), "application/json")
+                return self.send(200, json.dumps({"crops": crops, "labels": done}).encode(), "application/json")
             name = self.path.removeprefix("/img/")
             if self.path.startswith("/img/") and name in files:
                 return self.send(200, (root / "crops" / name).read_bytes(), "image/jpeg")
@@ -70,7 +78,7 @@ def main():
             labels_file.write_text(json.dumps(labels, indent=1))
             self.send(200, b"saved", "text/plain")
 
-    print(f"labelling {len(manifest)} seated people on http://localhost:{port}")
+    print(f"labelling {len(crops)} seated people on http://localhost:{port}")
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
 
 

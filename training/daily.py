@@ -31,7 +31,7 @@ from pathlib import Path
 
 from seatsense.paths import ROOT as WS
 from training.evaluate import calibrated, load_temperatures
-from training.review_set import spread
+from training.review_set import frame_times, spread
 from seatsense.activity import NOT_AT   # (the live "not working" threshold; torch is imported only by the model)
 ACT = WS / "recordings" / "activity"
 SCORES = WS / "models" / "daily_scores.jsonl"
@@ -75,7 +75,7 @@ def fill_missing(day):
     from seatsense.seat import SeatModel
     log = day / "live_d20.jsonl"
     rows = [json.loads(l) for l in log.read_text().splitlines() if l.strip()] if log.exists() else []
-    ts = missing([int(f.stem.split("_")[1]) for f in (day / "frames").glob("d20_*.jpg")], rows)
+    ts = missing(sorted(frame_times(day)), rows)
     if not ts:
         return
     model = SeatModel("d20")

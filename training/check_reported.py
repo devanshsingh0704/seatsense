@@ -21,12 +21,13 @@ def main():
     from seatsense.mistakes import parse
     from seatsense.presence import load_boxes
     from seatsense.seat import SeatModel
+    from training.review_set import frame_times
     seat, act = SeatModel("d20"), ActivityModel("d20")
     for day in map(Path, sys.argv[1:]):
         rep, log = day / "reported.txt", day / "live_d20.jsonl"
         if not rep.exists() or not log.exists():
             continue
-        frames = {int(f.stem.split("_")[1]) for f in (day / "frames").glob("d20_*.jpg")}
+        frames = frame_times(day)
         ts = sorted({json.loads(l)["t"] for l in log.read_text().splitlines() if l.strip()} & frames)
         boxes = {n: tuple(v / 2 for v in b) for n, b in load_boxes(WS / "config" / "zones" / "d20_focus.json").items()}
         out = {"_checked_at": datetime.now().isoformat(timespec="seconds")}

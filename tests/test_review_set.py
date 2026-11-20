@@ -1,6 +1,9 @@
 import unittest
 
-from training.review_set import latest, select
+import tempfile
+from pathlib import Path
+
+from training.review_set import frame_times, latest, select
 
 
 def row(t, **desks):
@@ -81,6 +84,18 @@ class Budget(unittest.TestCase):
     def test_no_budget_keeps_everything_as_before(self):
         # 120 is the first remaining minute, the old built-in control
         self.assertEqual(select(self.day(), reported=[], every=1000, extra=[300]), [0, 60, 120, 180, 300, 420])
+
+
+class FrameTimes(unittest.TestCase):
+    def test_an_empty_frame_file_is_not_a_frame(self):
+        # 16 Nov: a grab cut off by its timeout left a 0-byte d20_36480.jpg; reading it crashed that evening's set
+        with tempfile.TemporaryDirectory() as tmp:
+            frames = Path(tmp) / "frames"
+            frames.mkdir()
+            (frames / "d20_36420.jpg").write_bytes(b"\xff\xd8 jpeg")
+            (frames / "d20_36480.jpg").write_bytes(b"")
+            (frames / "partial_123.jpg").write_bytes(b"\xff\xd8 half")   # a grab still in progress
+            self.assertEqual(frame_times(Path(tmp)), {36420})
 
 
 if __name__ == "__main__":

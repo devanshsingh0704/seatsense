@@ -1,6 +1,6 @@
 import unittest
 
-from labelling.label_activity import ANSWERS, to_state, validate
+from labelling.label_activity import ANSWERS, shown, to_state, validate
 
 
 class Validate(unittest.TestCase):
@@ -21,6 +21,17 @@ class ToState(unittest.TestCase):
 
     def test_answers_cover_every_key(self):
         self.assertEqual(set(ANSWERS), set("WPTIU"))
+
+
+class Days(unittest.TestCase):
+    MANIFEST = [{"file": "a.jpg", "dir": "20261031-log"}, {"file": "b.jpg", "dir": "20261117-log"},
+                {"file": "c.jpg", "dir": "20261118-log"}]
+
+    def test_only_the_chosen_days_are_shown(self):
+        self.assertEqual([m["file"] for m in shown(self.MANIFEST, ["20261117-log", "20261118-log"])], ["b.jpg", "c.jpg"])
+
+    def test_no_days_shows_everything(self):
+        self.assertEqual(shown(self.MANIFEST, []), self.MANIFEST)
 
 
 if __name__ == "__main__":
