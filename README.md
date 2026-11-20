@@ -13,9 +13,12 @@ per-desk reports. It improves through a daily human-in-the-loop cycle: the model
 frames it is unsure about, a person labels them, and the next model is trained and scored on
 data it has never seen.
 
-It runs on one GPU workstation next to the NVR. No cloud and no stored video: the reports keep
-one state per desk per minute, and the learning loop one camera frame per minute, deleted after
+It is built to run on one GPU workstation next to the NVR. No cloud and no stored video: the reports
+keep one state per desk per minute, and the learning loop one camera frame per minute, deleted after
 14 days unless it was picked for labelling.
+
+**Deployment:** SeatSense ran on an office network from 16 October to 20 November 2026 (29 working
+days), then was paused. The code and this documentation are complete; `deploy/install.sh` starts it again.
 
 ![Live view: desk states over the blurred camera picture, desk cards and today's timeline](docs/screenshots/dashboard-live.png)
 
@@ -305,7 +308,7 @@ Trained weights, recordings and labels are **not** in this repository; see Priva
 
 ## Privacy
 
-Built for a deployment where staff were informed and HR owns the data.
+Built for, and used in, a deployment where staff were informed and HR owned the data.
 
 - **No video is stored.** The live system keeps one state per desk per minute (`states/`, kept).
 - **Frames for labelling:** the frame logger saves one still frame per minute in office hours.
